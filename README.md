@@ -3,6 +3,8 @@
 > Profesjonalny, webowy edytor zestawów znaków (fontów) oraz map ekranu dla komputerów **Atari 8-bit (seria 400/800, XL, XE)**.  
 > Aplikacja działa w 100% po stronie przeglądarki (SPA, Offline-first) z bezpośrednim odwzorowaniem sprzętowej pamięci retro w `Typed Arrays` i akcelerowanym renderowaniem na HTML5 `<canvas>`.
 
+![Screenshot](/img/screenshot.png)
+
 ---
 
 ## 📑 Spis Treści
