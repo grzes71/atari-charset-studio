@@ -105,9 +105,17 @@ export const App: React.FC = () => {
       </main>
 
       {/* Footer info */}
-      <footer className="px-4 py-2.5 text-center text-xs text-zinc-600 border-t border-zinc-900 flex items-center justify-between">
-        <span>Atari 8-bit Charset Studio — 100% Client-Side Retro SPA</span>
-        <span className="font-mono text-[11px]">Strict Mode TS • Direct TypedArray Buffers • HTML5 Canvas</span>
+      <footer className="px-4 py-2.5 text-center text-xs text-zinc-500 border-t border-zinc-900 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-1.5">
+          <span>Atari 8-bit Charset Studio</span>
+          <span className="text-zinc-600">—</span>
+          <span className="text-amber-400 font-mono font-medium px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-[11px]">
+            v{import.meta.env.VITE_APP_VERSION || '1.0.0'}
+          </span>
+          <span className="text-zinc-600 hidden sm:inline">—</span>
+          <span className="text-zinc-500 hidden sm:inline">100% Client-Side Retro SPA</span>
+        </div>
+        <span className="font-mono text-[11px] text-zinc-600">Strict Mode TS • Direct TypedArray Buffers • HTML5 Canvas</span>
       </footer>
     </div>
   );
