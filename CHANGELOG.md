@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.3.0 (2026-08-21)
+
+## What's Changed in PR #8 (feat: Show release version in footer)
+
+### 🚀 Features
+- feat: Show release version in footer (365e644)
+
+
+**Merged by:** @grzes71
+
+
 ## v1.2.0 (2026-08-21)
 
 ## What's Changed in PR #7 (feat: Add gh pages release)
