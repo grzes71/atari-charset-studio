@@ -1,0 +1,299 @@
+name: Release on PR Merge
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - main
+      - master
+
+permissions:
+  contents: write
+  pull-requests: read
+  packages: write
+
+jobs:
+  release:
+    name: Determine Version & Create Release
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Analyze Conventional Commits
+        id: semver
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = context.payload.pull_request.number;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            // Fetch all commits in the merged PR
+            const commits = await github.paginate(
+              github.rest.pulls.listCommits,
+              {
+                owner,
+                repo,
+                pull_number: prNumber,
+                per_page: 100,
+              }
+            );
+
+            console.log(`Analyzing ${commits.length} commits for PR #${prNumber}...`);
+
+            let bumpType = 'none'; // 'none' | 'patch' | 'minor' | 'major'
+            const featCommits = [];
+            const fixCommits = [];
+            const otherCommits = [];
+            const breakingCommits = [];
+
+            // Conventional Commits Regex: type(scope)!: description
+            const conventionalRegex = /^(\w+)(\((.+)\))?(!)?:\s*(.+)$/m;
+
+            for (const commitItem of commits) {
+              const msg = commitItem.commit.message;
+              const title = msg.split('\n')[0].trim();
+              const isBreaking = msg.includes('BREAKING CHANGE:') || msg.includes('BREAKING-CHANGE:') || title.includes('!:');
+
+              if (isBreaking) {
+                bumpType = 'major';
+                breakingCommits.push({ sha: commitItem.sha.substring(0, 7), message: title });
+              }
+
+              const match = title.match(conventionalRegex);
+              if (match) {
+                const type = match[1].toLowerCase();
+
+                if (type === 'feat') {
+                  if (bumpType !== 'major') bumpType = 'minor';
+                  featCommits.push({ sha: commitItem.sha.substring(0, 7), message: title });
+                } else if (['fix', 'perf'].includes(type)) {
+                  if (bumpType === 'none') bumpType = 'patch';
+                  fixCommits.push({ sha: commitItem.sha.substring(0, 7), message: title });
+                } else {
+                  otherCommits.push({ sha: commitItem.sha.substring(0, 7), message: title });
+                }
+              } else {
+                otherCommits.push({ sha: commitItem.sha.substring(0, 7), message: title });
+              }
+            }
+
+            // Also check PR title itself
+            const prTitle = context.payload.pull_request.title;
+            const prBreaking = prTitle.includes('BREAKING CHANGE:') || prTitle.includes('!:');
+            if (prBreaking) {
+              bumpType = 'major';
+            } else {
+              const prMatch = prTitle.match(conventionalRegex);
+              if (prMatch) {
+                const type = prMatch[1].toLowerCase();
+                if (type === 'feat' && bumpType !== 'major') {
+                  bumpType = 'minor';
+                } else if (['fix', 'perf'].includes(type) && bumpType === 'none') {
+                  bumpType = 'patch';
+                }
+              }
+            }
+
+            // Get latest tag if available
+            let latestTag = 'v1.0.0';
+            try {
+              const res = await exec.getExecOutput('git', ['describe', '--tags', '--abbrev=0']);
+              if (res.stdout && res.stdout.trim()) {
+                latestTag = res.stdout.trim();
+              }
+            } catch {
+              console.log('No existing tags found, defaulting to v1.0.0');
+            }
+
+            console.log(`Latest Tag: ${latestTag}`);
+            console.log(`Determined Bump Type: ${bumpType}`);
+
+            core.setOutput('bump_type', bumpType);
+            core.setOutput('latest_tag', latestTag);
+
+            // Generate release changelog
+            let changelog = `## What's Changed in PR #${prNumber} (${context.payload.pull_request.title})\n\n`;
+
+            if (breakingCommits.length > 0) {
+              changelog += `### ⚠️ Breaking Changes\n`;
+              breakingCommits.forEach(c => changelog += `- ${c.message} (${c.sha})\n`);
+              changelog += '\n';
+            }
+
+            if (featCommits.length > 0) {
+              changelog += `### 🚀 Features\n`;
+              featCommits.forEach(c => changelog += `- ${c.message} (${c.sha})\n`);
+              changelog += '\n';
+            }
+
+            if (fixCommits.length > 0) {
+              changelog += `### 🐛 Bug Fixes & Performance\n`;
+              fixCommits.forEach(c => changelog += `- ${c.message} (${c.sha})\n`);
+              changelog += '\n';
+            }
+
+            if (otherCommits.length > 0) {
+              changelog += `### 🔧 Other Changes\n`;
+              otherCommits.forEach(c => changelog += `- ${c.message} (${c.sha})\n`);
+              changelog += '\n';
+            }
+
+            changelog += `\n**Merged by:** @${context.actor}\n`;
+            core.setOutput('changelog', changelog);
+
+            // Save changelog directly to file using Node.js fs to prevent any shell escaping/multiline/null issues
+            const fs = require('fs');
+            fs.writeFileSync('/tmp/changelog_body.txt', changelog);
+
+      - name: Calculate Next Version
+        if: steps.semver.outputs.bump_type != 'none'
+        id: tag
+        run: |
+          LATEST_TAG="${{ steps.semver.outputs.latest_tag }}"
+          echo "Current Tag: $LATEST_TAG"
+
+          VERSION="${LATEST_TAG#v}"
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
+
+          MAJOR=${MAJOR:-1}
+          MINOR=${MINOR:-0}
+          PATCH=${PATCH:-0}
+
+          BUMP="${{ steps.semver.outputs.bump_type }}"
+
+          if [ "$BUMP" = "major" ]; then
+            MAJOR=$((MAJOR + 1))
+            MINOR=0
+            PATCH=0
+          elif [ "$BUMP" = "minor" ]; then
+            MINOR=$((MINOR + 1))
+            PATCH=0
+          elif [ "$BUMP" = "patch" ]; then
+            PATCH=$((PATCH + 1))
+          fi
+
+          NEW_TAG="v${MAJOR}.${MINOR}.${PATCH}"
+          NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+
+          echo "Calculated new version: $NEW_VERSION (Tag: $NEW_TAG)"
+          echo "new_tag=$NEW_TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Verify Version Format
+        if: steps.semver.outputs.bump_type != 'none'
+        run: |
+          VERSION="${{ steps.tag.outputs.version }}"
+          if ! [[ $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "❌ Invalid version format: $VERSION"
+            exit 1
+          fi
+          echo "✅ Valid SemVer format: $VERSION"
+
+      - name: Update package.json & CHANGELOG.md
+        if: steps.semver.outputs.bump_type != 'none'
+        env:
+          NEW_TAG: ${{ steps.tag.outputs.new_tag }}
+          NEW_VERSION: ${{ steps.tag.outputs.version }}
+        run: |
+          # Configure Git Bot
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Update version in package.json and package-lock.json
+          npm version "$NEW_VERSION" --no-git-tag-version --allow-same-version
+
+          # Update CHANGELOG.md
+          DATE_STR=$(date +'%Y-%m-%d')
+          TEMP_FILE=$(mktemp)
+
+          if [ -f CHANGELOG.md ]; then
+            echo -e "# Changelog\n" > "$TEMP_FILE"
+            echo -e "## $NEW_TAG ($DATE_STR)\n" >> "$TEMP_FILE"
+            if [ -f /tmp/changelog_body.txt ]; then
+              cat /tmp/changelog_body.txt >> "$TEMP_FILE"
+            fi
+            echo "" >> "$TEMP_FILE"
+            tail -n +2 CHANGELOG.md >> "$TEMP_FILE"
+          else
+            echo -e "# Changelog\n" > "$TEMP_FILE"
+            echo -e "## $NEW_TAG ($DATE_STR)\n" >> "$TEMP_FILE"
+            if [ -f /tmp/changelog_body.txt ]; then
+              cat /tmp/changelog_body.txt >> "$TEMP_FILE"
+            fi
+            echo "" >> "$TEMP_FILE"
+          fi
+
+          mv "$TEMP_FILE" CHANGELOG.md
+          rm -f /tmp/changelog_body.txt
+
+          git add package.json package-lock.json CHANGELOG.md
+          git commit -m "chore: release $NEW_TAG [skip ci]"
+
+      - name: Push Version Updates
+        if: steps.semver.outputs.bump_type != 'none'
+        run: |
+          BRANCH="${{ github.event.pull_request.base.ref }}"
+          git pull --rebase origin "$BRANCH" || { git rebase --abort; echo "❌ Conflict on rebase"; exit 1; }
+          git push origin "HEAD:$BRANCH"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run Tests
+        if: steps.semver.outputs.bump_type != 'none'
+        run: |
+          if npm run | grep -q "test:run"; then
+            npm run test:run
+          else
+            echo "⚠️ No test:run script found, skipping tests"
+          fi
+
+      - name: Build Production App
+        if: steps.semver.outputs.bump_type != 'none'
+        run: |
+          npm run build
+          test -d dist || (echo "❌ Build failed - dist directory not found" && exit 1)
+          echo "✅ Build successful!"
+
+      - name: Package Dist Asset
+        if: steps.semver.outputs.bump_type != 'none'
+        run: |
+          rm -f atari-charset-studio-*.zip
+          cd dist
+          zip -r "../atari-charset-studio-${{ steps.tag.outputs.new_tag }}.zip" .
+          cd ..
+          echo "✅ Created: atari-charset-studio-${{ steps.tag.outputs.new_tag }}.zip"
+
+      - name: Create GitHub Release
+        if: steps.semver.outputs.bump_type != 'none'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.new_tag }}
+          name: Release ${{ steps.tag.outputs.new_tag }}
+          body: ${{ steps.semver.outputs.changelog }}
+          files: atari-charset-studio-${{ steps.tag.outputs.new_tag }}.zip
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Skip Release
+        if: steps.semver.outputs.bump_type == 'none'
+        run: |
+          echo "No version bump needed (no feat, fix, or breaking changes in PR commits/title)."
+          echo "Skipping release creation."
