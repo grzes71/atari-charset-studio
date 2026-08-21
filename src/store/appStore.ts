@@ -69,6 +69,7 @@ export interface AppState {
   moveRow: (rowIndex: number, direction: 'up' | 'down') => void;
   clearRow: (rowIndex: number) => void;
   fillRow: (rowIndex: number, charCode: number) => void;
+  setAllRowsModeAndBank: (mode: AnticMode, bankId: string) => void;
 
   // Bank management
   createBank: (name?: string, data?: Uint8Array) => string;
@@ -78,6 +79,9 @@ export interface AppState {
   setActiveBank: (bankId: string) => void;
   loadRomFont: () => void;
   importFont: (data: Uint8Array, name?: string) => string;
+
+  // Project management (.atrview)
+  importAtrViewProject: (parsed: import('../utils/atrviewIO').ParsedAtrView) => void;
 
   // Undo / Redo
   snapshotHistory: () => void;
@@ -484,6 +488,17 @@ export const useAppStore = create<AppState>((set, get) => ({
     set((state) => ({ revision: state.revision + 1 }));
   },
 
+  setAllRowsModeAndBank: (mode, bankId) => {
+    const { screenRows, snapshotHistory } = get();
+    snapshotHistory();
+    const updated = screenRows.map((r) => ({
+      ...r,
+      mode,
+      bankId,
+    }));
+    set({ screenRows: updated, revision: get().revision + 1 });
+  },
+
   createBank: (name, data) => {
     const id = `bank-${Date.now()}`;
     const bankName = name || `Bank ${Object.keys(get().banks).length + 1}`;
@@ -590,5 +605,44 @@ export const useAppStore = create<AppState>((set, get) => ({
       revision: state.revision + 1,
     }));
     return id;
+  },
+
+  importAtrViewProject: (parsed) => {
+    const { snapshotHistory } = get();
+    snapshotHistory();
+
+    const newBanks: Record<string, CharacterBank> = {};
+    const bankIds: string[] = [];
+
+    parsed.banks.forEach((b, idx) => {
+      const id = `bank-${idx + 1}-${Date.now()}`;
+      bankIds.push(id);
+      newBanks[id] = {
+        id,
+        name: b.name || `Font ${idx + 1}`,
+        data: new Uint8Array(b.data),
+      };
+    });
+
+    const newRows: ScreenRow[] = parsed.screenRows.map((r, rowIdx) => {
+      const bankId = bankIds[r.bankIndex] || bankIds[0];
+      return {
+        id: `row-${rowIdx}-${Date.now()}-${Math.random()}`,
+        mode: r.mode,
+        bankId,
+        charData: new Uint8Array(r.charData),
+      };
+    });
+
+    set((state) => ({
+      banks: newBanks,
+      activeBankId: bankIds[0] || state.activeBankId,
+      screenRows: newRows.length > 0 ? newRows : state.screenRows,
+      colorRegisters: { ...parsed.colorRegisters },
+      selectedRowIndex: 0,
+      selectedColIndex: 0,
+      selectedCharIndex: 0,
+      revision: state.revision + 1,
+    }));
   },
 }));

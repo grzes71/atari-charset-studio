@@ -9,29 +9,36 @@ import {
   Copy,
   Trash2,
   Layers,
+  FileCode,
 } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { exportFontBinary, importFontBinary } from '../../utils/fileIO';
+import { exportAtrViewFile, importAtrViewFile } from '../../utils/atrviewIO';
 
 export const HeaderToolbar: React.FC = () => {
   const {
     banks,
     activeBankId,
+    screenRows,
+    colorRegisters,
     setActiveBank,
     createBank,
     duplicateBank,
     deleteBank,
     loadRomFont,
     importFont,
+    importAtrViewProject,
     undo,
     redo,
     undoStack,
     redoStack,
   } = useAppStore();
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const fntInputRef = useRef<HTMLInputElement>(null);
+  const atrviewInputRef = useRef<HTMLInputElement>(null);
 
-  const handleExport = () => {
+  // Export active font as raw .fnt (1024B)
+  const handleExportFnt = () => {
     const activeBank = banks[activeBankId];
     if (activeBank) {
       const sanitizedName = activeBank.name.replace(/[^a-z0-9_-]/gi, '_').toLowerCase();
@@ -39,7 +46,23 @@ export const HeaderToolbar: React.FC = () => {
     }
   };
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Export entire project as Atari FontMaker .atrview
+  const handleExportAtrView = () => {
+    const activeBank = banks[activeBankId];
+    const baseName = activeBank ? activeBank.name.replace(/[^a-z0-9_-]/gi, '_').toLowerCase() : 'atari_project';
+    exportAtrViewFile(
+      {
+        banks,
+        screenRows,
+        colorRegisters,
+        activeBankId,
+      },
+      `${baseName}.atrview`
+    );
+  };
+
+  // Handle .fnt file selection
+  const handleFntFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
       try {
@@ -48,7 +71,22 @@ export const HeaderToolbar: React.FC = () => {
         const bankName = file.name.replace(/\.[^/.]+$/, '');
         importFont(data, bankName);
       } catch (err: unknown) {
-        alert(err instanceof Error ? err.message : 'Błąd podczas importu pliku.');
+        alert(err instanceof Error ? err.message : 'Błąd podczas importu pliku .fnt.');
+      }
+      e.target.value = '';
+    }
+  };
+
+  // Handle .atrview file selection
+  const handleAtrViewFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      try {
+        const file = files[0];
+        const parsed = await importAtrViewFile(file);
+        importAtrViewProject(parsed);
+      } catch (err: unknown) {
+        alert(err instanceof Error ? err.message : 'Błąd podczas importu projektu .atrview.');
       }
       e.target.value = '';
     }
@@ -124,7 +162,7 @@ export const HeaderToolbar: React.FC = () => {
       </div>
 
       {/* Action Tools: Undo, Redo, Load ROM, Import, Export */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center flex-wrap gap-2">
         {/* Undo / Redo */}
         <div className="flex items-center bg-zinc-900/80 p-1 rounded-lg border border-zinc-800">
           <button
@@ -149,38 +187,67 @@ export const HeaderToolbar: React.FC = () => {
         <button
           onClick={loadRomFont}
           title="Załaduj standardowy font Atari XL/XE ROM"
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-xs font-medium text-zinc-300 hover:text-amber-400 transition"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-xs font-medium text-zinc-300 hover:text-amber-400 transition"
         >
           <RotateCcw className="w-3.5 h-3.5" />
-          <span className="hidden md:inline">Załaduj ROM</span>
+          <span className="hidden lg:inline">Załaduj ROM</span>
         </button>
 
-        {/* Import .fnt */}
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          title="Importuj surowy plik binarny .fnt / .rom (1024B)"
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-xs font-medium text-zinc-300 hover:text-sky-400 transition"
-        >
-          <Upload className="w-3.5 h-3.5 text-sky-400" />
-          <span>Importuj .fnt</span>
-        </button>
+        {/* Import Group */}
+        <div className="flex items-center bg-zinc-900/80 p-0.5 rounded-lg border border-zinc-800">
+          <button
+            onClick={() => atrviewInputRef.current?.click()}
+            title="Wczytaj kompletny projekt Atari FontMaker (.atrview)"
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded hover:bg-zinc-800 text-xs font-medium text-emerald-400 hover:text-emerald-300 transition"
+          >
+            <Upload className="w-3.5 h-3.5" />
+            <span>.atrview</span>
+          </button>
+          <span className="text-zinc-700">|</span>
+          <button
+            onClick={() => fntInputRef.current?.click()}
+            title="Importuj pojedynczy plik binarny .fnt / .rom (1024B)"
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded hover:bg-zinc-800 text-xs font-medium text-sky-400 hover:text-sky-300 transition"
+          >
+            <Upload className="w-3.5 h-3.5" />
+            <span>.fnt</span>
+          </button>
+        </div>
+
         <input
-          ref={fileInputRef}
+          ref={atrviewInputRef}
+          type="file"
+          accept=".atrview,.json"
+          onChange={handleAtrViewFileChange}
+          className="hidden"
+        />
+        <input
+          ref={fntInputRef}
           type="file"
           accept=".fnt,.rom,.bin"
-          onChange={handleFileChange}
+          onChange={handleFntFileChange}
           className="hidden"
         />
 
-        {/* Export .fnt */}
-        <button
-          onClick={handleExport}
-          title="Pobierz surowy plik binarny .fnt (1024B)"
-          className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-zinc-950 font-semibold text-xs shadow-lg shadow-amber-500/20 transition transform active:scale-95"
-        >
-          <Download className="w-3.5 h-3.5" />
-          <span>Eksportuj .fnt</span>
-        </button>
+        {/* Export Group */}
+        <div className="flex items-center bg-zinc-900/80 p-0.5 rounded-lg border border-zinc-800">
+          <button
+            onClick={handleExportAtrView}
+            title="Zapisz kompletny projekt (.atrview) dla Atari FontMaker"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 hover:text-emerald-200 border border-emerald-500/30 text-xs font-medium transition"
+          >
+            <FileCode className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Zapisz .atrview</span>
+          </button>
+          <button
+            onClick={handleExportFnt}
+            title="Pobierz aktywny bank jako surowy plik .fnt (1024B)"
+            className="flex items-center gap-1.5 px-3 py-1.5 ml-1 rounded-md bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-zinc-950 font-semibold text-xs shadow-lg shadow-amber-500/20 transition transform active:scale-95"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>Pobierz .fnt</span>
+          </button>
+        </div>
       </div>
     </header>
   );

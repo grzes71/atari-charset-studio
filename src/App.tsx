@@ -6,11 +6,12 @@ import { ColorPalette } from './components/ColorPalette/ColorPalette';
 import { ScreenMap } from './components/ScreenMap/ScreenMap';
 import { useAppStore } from './store/appStore';
 import { importFontBinary } from './utils/fileIO';
+import { importAtrViewFile } from './utils/atrviewIO';
 import { UploadCloud } from 'lucide-react';
 
 export const App: React.FC = () => {
   const [isDragOver, setIsDragOver] = useState(false);
-  const { undo, redo, importFont } = useAppStore();
+  const { undo, redo, importFont, importAtrViewProject } = useAppStore();
 
   // Global Keyboard Shortcuts (Undo / Redo)
   useEffect(() => {
@@ -32,7 +33,7 @@ export const App: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [undo, redo]);
 
-  // Global Drag and Drop for .fnt / .rom files
+  // Global Drag and Drop for .atrview and .fnt / .rom files
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(true);
@@ -47,13 +48,20 @@ export const App: React.FC = () => {
     setIsDragOver(false);
 
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const file = e.dataTransfer.files[0];
+      const fileNameLower = file.name.toLowerCase();
+
       try {
-        const file = e.dataTransfer.files[0];
-        const data = await importFontBinary(file);
-        const bankName = file.name.replace(/\.[^/.]+$/, '');
-        importFont(data, bankName);
+        if (fileNameLower.endsWith('.atrview') || fileNameLower.endsWith('.json')) {
+          const parsed = await importAtrViewFile(file);
+          importAtrViewProject(parsed);
+        } else {
+          const data = await importFontBinary(file);
+          const bankName = file.name.replace(/\.[^/.]+$/, '');
+          importFont(data, bankName);
+        }
       } catch (err: unknown) {
-        alert(err instanceof Error ? err.message : 'Błąd podczas upuszczania pliku.');
+        alert(err instanceof Error ? err.message : 'Błąd podczas wczytywania upuszczonego pliku.');
       }
     }
   };
@@ -70,10 +78,10 @@ export const App: React.FC = () => {
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex flex-col items-center justify-center border-4 border-dashed border-amber-400 p-8">
           <UploadCloud className="w-16 h-16 text-amber-400 animate-bounce mb-4" />
           <h3 className="text-xl font-bold text-amber-300 font-pixel mb-2">
-            Upuść plik fontu Atari (.fnt / .rom)
+            Upuść plik projektu (.atrview) lub fontu (.fnt / .rom)
           </h3>
           <p className="text-zinc-400 text-sm">
-            Zostanie utworzony nowy bank znaków z wczytanych danych binarnych (1024B)
+            Projekty .atrview wczytują kompletny stan edytora (do 4 banków, ekran i kolory), a .fnt tworzy nowy bank znaków (1024B)
           </p>
         </div>
       )}
