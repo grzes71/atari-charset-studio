@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.0.4 (2026-08-21)
+
+## What's Changed in PR #4 (fix: Add screenshot)
+
+### 🐛 Bug Fixes & Performance
+- fix: Add screenshot (ae6d11e)
+
+
+**Merged by:** @grzes71
+
+
 ## v1.0.3 (2026-08-21)
 
 ## What's Changed in PR #3 (fix: Update Readme)
