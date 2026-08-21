@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.2.0 (2026-08-21)
+
+## What's Changed in PR #7 (feat: Add gh pages release)
+
+### 🚀 Features
+- feat: Add gh pages release (1fa6372)
+
+
+**Merged by:** @grzes71
+
+
 ## v1.1.0 (2026-08-21)
 
 ## What's Changed in PR #6 (feat: Add atrview support)
