@@ -20,6 +20,9 @@
   - [Struktura Pamięci](#struktura-pamięci)
 - [Struktura Projektu](#-struktura-projektu)
 - [Testy i Budowanie](#-testy-i-budowanie)
+- [Uruchamianie Wersji Produkcyjnej (Asset z Release)](#-uruchamianie-wersji-produkcyjnej-asset-z-release)
+- [Automatyzacja Wydań (GitHub Actions Release Workflow)](#-automatyzacja-wydań-github-actions-release-workflow)
+- [Licencja](#-licencja)
 
 ---
 
@@ -177,7 +180,72 @@ npm run build
 ```
 Zbudowane, zoptymalizowane pliki produkcyjne zostaną wygenerowane w katalogu `dist/`.
 
+### Lokalny podgląd buildu produkcyjnego (Vite Preview)
+```bash
+npm run preview
+```
+Uruchomi lokalny serwer HTTP serwujący zawartość katalogu `dist/` (domyślnie pod adresem `http://localhost:4173`).
+
+---
+
+## 🚀 Uruchamianie Wersji Produkcyjnej (Asset z Release)
+
+Aplikacja jest w pełni statyczną aplikacją SPA (Single Page Application). Każdy oficjalny GitHub Release zawiera gotową paczkę `atari-charset-studio-vX.Y.Z.zip` ze skompilowanym kodem (`index.html` oraz zasoby w katalogu `assets/`).
+
+### Jak uruchomić pobraną paczkę zip:
+
+1. **Pobierz i rozpakuj** plik `atari-charset-studio-vX.Y.Z.zip` ze strony [Releases w repozytorium](https://github.com/grzes71/atari-charset-studio/releases).
+2. Ze względu na politykę bezpieczeństwa nowoczesnych przeglądarek dla modułów JavaScript (ES Modules / CORS), plików SPA nie należy otwierać bezpośrednio dwuklikiem protokołem `file://`. Wystarczy uruchomić prosty, lokalny serwer HTTP w rozpakowanym katalogu:
+
+#### Opcja A: Poprzez Node.js (`npx`)
+W rozpakowanym folderze wykonaj:
+```bash
+npx serve .
+# lub
+npx http-server .
+```
+Aplikacja otworzy się pod adresem wskazanym w konsoli (np. `http://localhost:3000` lub `http://localhost:8080`).
+
+#### Opcja B: Poprzez Pythona 3 (bez konieczności posiadania Node.js)
+W rozpakowanym folderze uruchom:
+```bash
+python -m http.server 8080
+```
+Następnie otwórz przeglądarkę pod adresem: **[http://localhost:8080](http://localhost:8080)**.
+
+#### Opcja C: Rozszerzenie VS Code (Live Server)
+Otwórz rozpakowany folder w VS Code, kliknij prawym przyciskiem myszy na plik `index.html` i wybierz **"Open with Live Server"**.
+
+#### Opcja D: Dowolny hosting statyczny / serwer WWW
+Zawartość rozpakowanego archiwum można bezpośrednio wgrać na dowolny serwer lub hosting statyczny (GitHub Pages, Cloudflare Pages, Netlify, Vercel, Nginx, Apache, Caddy).
+
+---
+
+## ⚙️ Automatyzacja Wydań (GitHub Actions Release Workflow)
+
+W repozytorium skonfigurowany jest w pełni zautomatyzowany przepływ wydań CI/CD ([release-on-pr-merge.yml](.github/workflows/release-on-pr-merge.yml)):
+
+1. **Wyzwalacz (Trigger):**
+   * Workflow uruchamia się automatycznie po **scaleniu (merge) Pull Requesta** do gałęzi `main` lub `master`.
+2. **Automatyczne wersjonowanie SemVer (Conventional Commits):**
+   * Analizuje tytuł PR oraz historię commitów zawartych w PR:
+     * `feat:` ➔ podbicie wersji **minor** (np. `v1.0.2` ➔ `v1.1.0`).
+     * `fix:`, `perf:` ➔ podbicie wersji **patch** (np. `v1.0.2` ➔ `v1.0.3`).
+     * `BREAKING CHANGE:` lub `!:` ➔ podbicie wersji **major** (np. `v1.0.2` ➔ `v2.0.0`).
+     * Pozostałe (np. `docs:`, `chore:`, `style:`) ➔ brak podbicia wersji i pominięcie wydania.
+3. **Aktualizacja wersji i rejestru zmian:**
+   * Automatycznie podbija wersję w `package.json` oraz `package-lock.json`.
+   * Generuje i dołącza nowy wpis w pliku `CHANGELOG.md` z listą wprowadzonych zmian.
+   * Tworzy commit `chore: release vX.Y.Z [skip ci]` i wypycha go do gałęzi głównej.
+4. **Weryfikacja, Budowanie i Pakowanie:**
+   * Uruchamia zestaw testów jednostkowych (`npm run test:run`).
+   * Buduje zoptymalizowaną wersję produkcyjną (`npm run build`).
+   * Pakuje zawartość katalogu `dist/` do archiwum zip: `atari-charset-studio-vX.Y.Z.zip`.
+5. **Publikacja GitHub Release:**
+   * Tworzy nowy tag Git `vX.Y.Z` oraz oficjalny GitHub Release z automatycznie sformatowanymi Release Notes i dołączonym plikiem `.zip` jako gotowym do pobrania assetem.
+
 ---
 
 ## 📜 Licencja
 Projekt udostępniony na licencji **MIT**. Dedykowany społeczności retrocomputingu i twórcom oprogramowania dla komputerów Atari 8-bit.
+
