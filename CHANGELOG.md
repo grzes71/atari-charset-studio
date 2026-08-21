@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.1.0 (2026-08-21)
+
+## What's Changed in PR #6 (feat: Add atrview support)
+
+### 🚀 Features
+- feat: Add atrview support (2f4c948)
+
+
+**Merged by:** @grzes71
+
+
 ## v1.0.5 (2026-08-21)
 
 ## What's Changed in PR #5 (fix: Fix screenshot)
