@@ -8,6 +8,7 @@ import {
   Type,
   Brush,
   Layers,
+  CheckCheck,
 } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { ScreenMapRenderer } from '../../core/renderers/ScreenMapRenderer';
@@ -140,6 +141,7 @@ export const ScreenMap: React.FC = () => {
     moveRow,
     clearRow,
     fillRow,
+    setAllRowsModeAndBank,
     selectedCharIndex,
     isInverseActive,
     screenPaintMode,
@@ -449,6 +451,16 @@ export const ScreenMap: React.FC = () => {
                 ))}
               </select>
             </div>
+
+            {/* Apply Mode & Bank to all rows */}
+            <button
+              onClick={() => setAllRowsModeAndBank(activeRow.mode, activeRow.bankId)}
+              title={`Ustaw tryb Antic ${activeRow.mode} oraz bank "${banks[activeRow.bankId]?.name || activeRow.bankId}" dla wszystkich wierszy ekranu`}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 hover:text-amber-200 border border-amber-500/30 text-xs font-medium transition cursor-pointer"
+            >
+              <CheckCheck className="w-3.5 h-3.5 text-amber-400" />
+              <span>Zastosuj dla wszystkich</span>
+            </button>
           </div>
 
           {/* Row Action Buttons */}
