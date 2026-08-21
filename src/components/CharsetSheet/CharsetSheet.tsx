@@ -1,13 +1,12 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { Grid } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
-import { CharsetSheetRenderer, CharsetViewRange } from '../../core/renderers/CharsetSheetRenderer';
+import { CharsetSheetRenderer } from '../../core/renderers/CharsetSheetRenderer';
 import { atariByteToHex } from '../../utils/atariColorLUT';
 
 export const CharsetSheet: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [hoverCode, setHoverCode] = useState<number | null>(null);
-  const [viewRange, setViewRange] = useState<CharsetViewRange>('standard');
 
   const {
     banks,
@@ -26,9 +25,7 @@ export const CharsetSheet: React.FC = () => {
   const activeRowMode = screenRows[selectedRowIndex]?.mode || 2;
   const isMulticolor = activeRowMode !== 2;
   const scale = 2;
-
-  const isFull256 = viewRange === 'full256';
-  const totalRows = isFull256 ? 16 : 8;
+  const totalRows = 16; // Always 16 rows * 16 cols = 256 characters
 
   const renderSheet = useCallback(() => {
     const canvas = canvasRef.current;
@@ -43,10 +40,10 @@ export const CharsetSheet: React.FC = () => {
       registers: colorRegisters,
       selectedIndex: selectedCharIndex,
       scale,
-      viewRange,
+      viewRange: 'full256',
       isInverseActive,
     });
-  }, [activeBank, activeRowMode, colorRegisters, selectedCharIndex, viewRange, isInverseActive, revision]);
+  }, [activeBank, activeRowMode, colorRegisters, selectedCharIndex, isInverseActive, revision]);
 
   useEffect(() => {
     renderSheet();
@@ -66,11 +63,7 @@ export const CharsetSheet: React.FC = () => {
     const row = Math.floor(clientY / cellHeight);
 
     if (col >= 0 && col < 16 && row >= 0 && row < totalRows) {
-      const idx = row * 16 + col;
-      if (viewRange === 'inverse') {
-        return idx + 128;
-      }
-      return idx; // 0..127 or 0..255 for full256
+      return row * 16 + col; // 0..255
     }
     return null;
   };
@@ -96,7 +89,7 @@ export const CharsetSheet: React.FC = () => {
 
   const activeDisplayCode = hoverCode !== null
     ? hoverCode
-    : (selectedCharIndex + (isInverseActive || viewRange === 'inverse' ? 128 : 0));
+    : (selectedCharIndex + (isInverseActive ? 128 : 0));
 
   const activeGlyphIndex = activeDisplayCode % 128;
   const isDisplayInverse = activeDisplayCode >= 128;
@@ -107,7 +100,7 @@ export const CharsetSheet: React.FC = () => {
 
   return (
     <div className="glass-panel rounded-xl p-4 flex flex-col gap-3 shadow-lg border border-zinc-800">
-      {/* Header with Title & Range Switcher Tabs */}
+      {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-800 pb-2.5">
         <div className="flex items-center gap-2">
           <Grid className="w-4 h-4 text-amber-400" />
@@ -115,53 +108,13 @@ export const CharsetSheet: React.FC = () => {
             Zestaw Znaków i Paleta
           </h2>
         </div>
-
-        {/* View Range Tabs */}
-        <div className="flex items-center bg-zinc-900/90 p-1 rounded-lg border border-zinc-800">
-          <button
-            onClick={() => {
-              setViewRange('standard');
-              setIsInverseActive(false);
-            }}
-            title={isMulticolor ? 'Znaki 0-127: Para 11 -> COLPF2' : 'Znaki 0-127: Normalny'}
-            className={`px-2.5 py-1 rounded text-xs font-mono font-medium transition ${
-              viewRange === 'standard'
-                ? 'bg-amber-500 text-zinc-950 font-bold shadow'
-                : 'text-zinc-400 hover:text-zinc-200'
-            }`}
-          >
-            0–127 {isMulticolor ? '(COLPF2)' : '(Norm)'}
-          </button>
-          <button
-            onClick={() => {
-              setViewRange('inverse');
-              setIsInverseActive(true);
-            }}
-            title={isMulticolor ? 'Znaki 128-255: Para 11 -> COLPF3 (5. Kolor)' : 'Znaki 128-255: Inwersja wideo'}
-            className={`px-2.5 py-1 rounded text-xs font-mono font-medium transition ${
-              viewRange === 'inverse'
-                ? 'bg-amber-500 text-zinc-950 font-bold shadow'
-                : 'text-zinc-400 hover:text-zinc-200'
-            }`}
-          >
-            128–255 {isMulticolor ? '(5. Kolor COLPF3)' : '(Inwersja)'}
-          </button>
-          <button
-            onClick={() => setViewRange('full256')}
-            title="Pełny zestaw 256 kodów ekranowych (0-127 + 128-255)"
-            className={`px-2.5 py-1 rounded text-xs font-mono font-medium transition ${
-              viewRange === 'full256'
-                ? 'bg-amber-500 text-zinc-950 font-bold shadow'
-                : 'text-zinc-400 hover:text-zinc-200'
-            }`}
-          >
-            Wszystkie 256
-          </button>
-        </div>
+        <span className="font-mono text-xs px-2 py-0.5 rounded bg-zinc-900 text-zinc-400 border border-zinc-800">
+          Wszystkie 256 znaków (0–255)
+        </span>
       </div>
 
       {/* Mode & Palette Indicator */}
-      <div className="flex items-center justify-between text-xs px-2 py-1 bg-zinc-900/60 rounded border border-zinc-800/60 font-mono">
+      <div className="flex items-center justify-between text-xs px-2.5 py-1.5 bg-zinc-900/60 rounded border border-zinc-800/60 font-mono">
         <span className="text-zinc-400">
           Tryb:{' '}
           <strong className="text-amber-400 font-bold">
@@ -193,7 +146,7 @@ export const CharsetSheet: React.FC = () => {
         )}
       </div>
 
-      {/* Canvas Sheet */}
+      {/* Canvas Sheet (All 256 characters) */}
       <div className="flex justify-center p-2 bg-zinc-950 rounded-lg border border-zinc-800/80 shadow-inner">
         <canvas
           ref={canvasRef}
@@ -202,10 +155,10 @@ export const CharsetSheet: React.FC = () => {
           onClick={handleCanvasClick}
           onMouseMove={handleMouseMove}
           onMouseLeave={handleMouseLeave}
-          className="cursor-pointer border border-zinc-800 hover:border-amber-500/40 rounded transition"
+          className="cursor-pointer border border-zinc-800 hover:border-amber-500/40 rounded transition block"
           style={{
             width: '100%',
-            maxWidth: isFull256 ? '420px' : '384px',
+            maxWidth: '420px',
             imageRendering: 'pixelated',
           }}
         />
@@ -242,14 +195,13 @@ export const CharsetSheet: React.FC = () => {
           { label: 'Litery A-Z (33-58)', start: 33 },
           { label: 'Litery a-z (97-122)', start: 97 },
           { label: 'Grafika (64-95)', start: 64 },
+          { label: 'Inwersja / 5. Kolor (128-255)', start: 128 },
         ].map((cat) => (
           <button
             key={cat.label}
             onClick={() => {
-              setSelectedCharIndex(cat.start);
-              if (viewRange === 'inverse') {
-                setIsInverseActive(true);
-              }
+              setSelectedCharIndex(cat.start % 128);
+              setIsInverseActive(cat.start >= 128);
             }}
             className="px-2 py-1 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-[11px] text-zinc-300 hover:text-amber-400 transition"
           >
