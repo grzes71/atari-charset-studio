@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { GlyphRenderer } from '../../core/renderers/GlyphRenderer';
-import { BitPair } from '../../types';
+import { AnticMode, BitPair } from '../../types';
 import { atariByteToHex } from '../../utils/atariColorLUT';
 
 export const GlyphEditor: React.FC = () => {
@@ -32,6 +32,7 @@ export const GlyphEditor: React.FC = () => {
     selectedCharIndex,
     screenRows,
     selectedRowIndex,
+    setRowMode,
     colorRegisters,
     activeColorBitPair,
     setActiveColorBitPair,
@@ -182,6 +183,31 @@ export const GlyphEditor: React.FC = () => {
             height={32}
             className="border border-zinc-700 rounded bg-black"
           />
+        </div>
+      </div>
+
+      {/* Mode Switcher Tabs */}
+      <div className="flex items-center justify-between bg-zinc-900/90 p-1.5 rounded-lg border border-zinc-800">
+        <span className="text-xs text-zinc-400 font-medium ml-1">Tryb ANTIC:</span>
+        <div className="flex items-center gap-1">
+          {[
+            { mode: 2, label: 'Antic 2 (Hires 8x8)', desc: '1 bit / piksel (2 kolory)' },
+            { mode: 4, label: 'Antic 4 (Multi 4x8)', desc: '2 bity / piksel (do 5 kolorów)' },
+            { mode: 5, label: 'Antic 5 (Double 4x16)', desc: '2 bity / piksel (podwójna wysokość)' },
+          ].map((m) => (
+            <button
+              key={m.mode}
+              onClick={() => setRowMode(selectedRowIndex, m.mode as AnticMode)}
+              title={m.desc}
+              className={`px-2.5 py-1 rounded text-xs font-mono font-medium transition ${
+                activeRowMode === m.mode
+                  ? 'bg-amber-500 text-zinc-950 font-bold shadow'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'
+              }`}
+            >
+              {m.label.split(' ')[0]} {m.label.split(' ')[1]}
+            </button>
+          ))}
         </div>
       </div>
 
