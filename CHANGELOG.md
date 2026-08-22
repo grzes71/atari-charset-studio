@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.4.0 (2026-08-22)
+
+## What's Changed in PR #9 (feat: Support for individual palettes)
+
+### 🚀 Features
+- feat: Support for individual palettes (e58c290)
+
+
+**Merged by:** @grzes71
+
+
 ## v1.3.0 (2026-08-21)
 
 ## What's Changed in PR #8 (feat: Show release version in footer)
