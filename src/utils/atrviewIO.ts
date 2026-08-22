@@ -89,7 +89,8 @@ export function bytesToHex(bytes: Uint8Array): string {
 export function parseAtrView(jsonStr: string): ParsedAtrView {
   let dto: AtrViewDto;
   try {
-    dto = JSON.parse(jsonStr);
+    const sanitized = jsonStr.replace(/^\uFEFF/, '').trim();
+    dto = JSON.parse(sanitized);
   } catch {
     throw new Error('Nieprawidłowy format JSON pliku .atrview.');
   }
@@ -117,29 +118,50 @@ export function parseAtrView(jsonStr: string): ParsedAtrView {
   }
 
   // 3. Colors
-  let colorsHex = (dto.Colors || '0E0028CA9446161AB4BA').trim();
-  if (colorsHex.length === 12) {
-    colorsHex += '161AB4BA';
+  const rawColorsInput = (dto as Record<string, unknown>).Colors ?? (dto as Record<string, unknown>).colors ?? (dto as Record<string, unknown>).COLORS;
+  let colorBytes: Uint8Array;
+
+  if (rawColorsInput instanceof Uint8Array) {
+    colorBytes = rawColorsInput;
+  } else if (Array.isArray(rawColorsInput)) {
+    colorBytes = new Uint8Array(
+      rawColorsInput.map((c) => {
+        if (typeof c === 'number') return c & 0xff;
+        if (typeof c === 'string') {
+          const clean = c.replace(/[^0-9a-fA-F]/g, '');
+          return parseInt(clean, 16) || 0;
+        }
+        return 0;
+      })
+    );
+  } else if (typeof rawColorsInput === 'string' && rawColorsInput.trim().length > 0) {
+    let cleanHex = rawColorsInput.replace(/[^0-9a-fA-F]/g, '');
+    if (cleanHex.length === 12) {
+      cleanHex += '161AB4BA';
+    }
+    colorBytes = hexToBytes(cleanHex);
+  } else {
+    colorBytes = new Uint8Array([0x0e, 0x00, 0x28, 0xca, 0x94, 0x46, 0x16, 0x1a, 0xb4, 0xba]);
   }
-  let colorBytes = hexToBytes(colorsHex);
-  if (colorBytes.length < 6) {
-    const padded = new Uint8Array(10);
-    padded.set([0x0e, 0x00, 0x28, 0xca, 0x94, 0x46, 0x16, 0x1a, 0xb4, 0xba]);
-    padded.set(colorBytes);
-    colorBytes = padded;
-  } else if (colorBytes.length < 10) {
-    const padded = new Uint8Array(10);
-    padded.set([0x0e, 0x00, 0x28, 0xca, 0x94, 0x46, 0x16, 0x1a, 0xb4, 0xba]);
-    padded.set(colorBytes);
+
+  if (colorBytes.length < 10) {
+    const padded = new Uint8Array([0x0e, 0x00, 0x28, 0xca, 0x94, 0x46, 0x16, 0x1a, 0xb4, 0xba]);
+    padded.set(colorBytes.subarray(0, Math.min(10, colorBytes.length)));
     colorBytes = padded;
   }
 
+  const colbak = colorBytes[1] ?? 0x00;
+  const colpf0 = colorBytes[2] ?? 0x28;
+  const colpf1 = colorBytes[3] ?? 0xca;
+  const colpf2 = colorBytes[4] ?? 0x94;
+  const colpf3 = colorBytes[5] ?? 0x46;
+
   const colorRegisters: ColorRegisters = {
-    COLBAK: colorBytes[1] ?? 0x00,
-    COLPF0: colorBytes[2] ?? 0x28,
-    COLPF1: colorBytes[3] ?? 0xca,
-    COLPF2: colorBytes[4] ?? 0x94,
-    COLPF3: colorBytes[5] ?? 0x46,
+    COLBAK: colbak,
+    COLPF0: colpf0,
+    COLPF1: colpf1,
+    COLPF2: colpf2,
+    COLPF3: colpf3,
   };
 
   // 4. Fonts (Data)
@@ -279,9 +301,9 @@ export function serializeAtrView(state: {
     }
   }
 
-  // Colors: 10 bytes: 0E, COLBAK, COLPF0, COLPF1, COLPF2, COLPF3, 16, 1A, B4, BA
+  // Colors: 10 bytes: Mode 2 LUM (COLPF2), COLBAK, COLPF0, COLPF1, COLPF2, COLPF3, 16, 1A, B4, BA
   const colorBytes = new Uint8Array([
-    0x0e,
+    state.colorRegisters.COLPF2 & 0xff,
     state.colorRegisters.COLBAK & 0xff,
     state.colorRegisters.COLPF0 & 0xff,
     state.colorRegisters.COLPF1 & 0xff,

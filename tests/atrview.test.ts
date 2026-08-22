@@ -182,4 +182,43 @@ describe('atrviewIO Utilities', () => {
     expect(roundTrip.screenRows[5].charData[0]).toBe(5);
     expect(roundTrip.colorRegisters).toEqual(colorRegisters);
   });
+
+  it('correctly maps Mode 2 luminance from byte 0 to COLPF2', () => {
+    const json = JSON.stringify({
+      Version: '2023',
+      ColoredGfx: '0', // Antic Mode 2
+      Width: 40,
+      Height: 24,
+      Chars: '00'.repeat(40 * 24),
+      Lines: '01'.repeat(24),
+      Colors: '1E9028CA9446', // Byte 0 is 0x1E (yellow text), Byte 1 is 0x90 (blue background)
+      Data: '00'.repeat(4096),
+    });
+
+    const parsed = parseAtrView(json);
+    expect(parsed.mode).toBe(2);
+    expect(parsed.colorRegisters.COLBAK).toBe(0x90);
+    expect(parsed.colorRegisters.COLPF2).toBe(0x94);
+  });
+
+  it('supports lowercase colors and number array in colors', () => {
+    const json = JSON.stringify({
+      Version: '2023',
+      ColoredGfx: '1',
+      Width: 40,
+      Height: 24,
+      Chars: '00'.repeat(40 * 24),
+      Lines: '01'.repeat(24),
+      colors: [14, 0x70, 0x32, 0x84, 0xa6, 0x28],
+      Data: '00'.repeat(4096),
+    });
+
+    const parsed = parseAtrView(json);
+    expect(parsed.colorRegisters.COLBAK).toBe(0x70);
+    expect(parsed.colorRegisters.COLPF0).toBe(0x32);
+    expect(parsed.colorRegisters.COLPF1).toBe(0x84);
+    expect(parsed.colorRegisters.COLPF2).toBe(0xa6);
+    expect(parsed.colorRegisters.COLPF3).toBe(0x28);
+  });
 });
+
