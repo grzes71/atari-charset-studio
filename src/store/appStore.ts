@@ -4,6 +4,7 @@ import {
   BitPair,
   CharacterBank,
   ColorRegisters,
+  PaletteApplyMode,
   ScreenPaintMode,
   ScreenRow,
   ToolMode,
@@ -13,9 +14,16 @@ import { GlyphManipulator } from '../core/services/GlyphManipulator';
 
 interface HistorySnapshot {
   banks: Record<string, Uint8Array>; // cloned buffers
-  screenRows: { id: string; mode: AnticMode; bankId: string; charData: Uint8Array }[];
+  screenRows: {
+    id: string;
+    mode: AnticMode;
+    bankId: string;
+    charData: Uint8Array;
+    colorRegisters: ColorRegisters;
+  }[];
   activeBankId: string;
   selectedCharIndex: number;
+  colorRegisters: ColorRegisters;
 }
 
 export interface AppState {
@@ -24,6 +32,7 @@ export interface AppState {
   activeBankId: string;
   screenRows: ScreenRow[];
   colorRegisters: ColorRegisters;
+  paletteApplyMode: PaletteApplyMode;
 
   selectedCharIndex: number;
   activeColorBitPair: BitPair;
@@ -46,6 +55,9 @@ export interface AppState {
   setScreenPaintMode: (mode: ScreenPaintMode) => void;
   setIsInverseActive: (inverse: boolean) => void;
   setSelectedCell: (row: number, col: number) => void;
+  setPaletteApplyMode: (mode: PaletteApplyMode) => void;
+  applyCurrentPalette: (mode?: PaletteApplyMode) => void;
+  setRowPalette: (rowIndex: number, registers: ColorRegisters) => void;
 
   setColorRegister: (register: keyof ColorRegisters, val: number) => void;
 
@@ -70,6 +82,7 @@ export interface AppState {
   clearRow: (rowIndex: number) => void;
   fillRow: (rowIndex: number, charCode: number) => void;
   setAllRowsModeAndBank: (mode: AnticMode, bankId: string) => void;
+  setModeForBankRows: (bankId: string, mode: AnticMode) => void;
 
   // Bank management
   createBank: (name?: string, data?: Uint8Array) => string;
@@ -90,6 +103,14 @@ export interface AppState {
 }
 
 const DEFAULT_BANK_ID = 'bank-0';
+
+const DEFAULT_COLOR_REGISTERS: ColorRegisters = {
+  COLBAK: 0x00, // Black
+  COLPF0: 0x28, // Gold / Orange
+  COLPF1: 0xca, // Green
+  COLPF2: 0x94, // Blue
+  COLPF3: 0x46, // Pink / Red
+};
 
 function createDefaultScreenRows(): ScreenRow[] {
   const rows: ScreenRow[] = [];
@@ -113,6 +134,7 @@ function createDefaultScreenRows(): ScreenRow[] {
       mode: 2,
       bankId: DEFAULT_BANK_ID,
       charData,
+      colorRegisters: { ...DEFAULT_COLOR_REGISTERS },
     });
   }
   return rows;
@@ -123,6 +145,7 @@ function cloneHistorySnapshot(state: {
   screenRows: ScreenRow[];
   activeBankId: string;
   selectedCharIndex: number;
+  colorRegisters: ColorRegisters;
 }): HistorySnapshot {
   const bankCopies: Record<string, Uint8Array> = {};
   for (const [id, bank] of Object.entries(state.banks)) {
@@ -133,6 +156,7 @@ function cloneHistorySnapshot(state: {
     mode: r.mode,
     bankId: r.bankId,
     charData: new Uint8Array(r.charData),
+    colorRegisters: { ...r.colorRegisters },
   }));
 
   return {
@@ -140,6 +164,7 @@ function cloneHistorySnapshot(state: {
     screenRows: rowCopies,
     activeBankId: state.activeBankId,
     selectedCharIndex: state.selectedCharIndex,
+    colorRegisters: { ...state.colorRegisters },
   };
 }
 
@@ -153,13 +178,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
   activeBankId: DEFAULT_BANK_ID,
   screenRows: createDefaultScreenRows(),
-  colorRegisters: {
-    COLBAK: 0x00, // Black
-    COLPF0: 0x28, // Gold / Orange
-    COLPF1: 0xca, // Green
-    COLPF2: 0x94, // Blue
-    COLPF3: 0x46, // Pink / Red
-  },
+  colorRegisters: { ...DEFAULT_COLOR_REGISTERS },
+  paletteApplyMode: 'currentRow',
 
   selectedCharIndex: 33, // 'A' by default
   activeColorBitPair: 1, // Default drawing color in multicolor
@@ -185,20 +205,115 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   setIsInverseActive: (inverse) => set({ isInverseActive: inverse }),
 
-  setSelectedCell: (row, col) =>
-    set({
-      selectedRowIndex: Math.max(0, Math.min(get().screenRows.length - 1, row)),
-      selectedColIndex: Math.max(0, Math.min(39, col)),
-    }),
-
-  setColorRegister: (register, val) =>
+  setSelectedCell: (row, col) => {
+    const clampedRow = Math.max(0, Math.min(get().screenRows.length - 1, row));
+    const clampedCol = Math.max(0, Math.min(39, col));
+    const targetRow = get().screenRows[clampedRow];
     set((state) => ({
-      colorRegisters: {
-        ...state.colorRegisters,
-        [register]: val & 0xff,
-      },
+      selectedRowIndex: clampedRow,
+      selectedColIndex: clampedCol,
+      colorRegisters: targetRow?.colorRegisters
+        ? { ...targetRow.colorRegisters }
+        : state.colorRegisters,
+    }));
+  },
+
+  setPaletteApplyMode: (mode) => set({ paletteApplyMode: mode }),
+
+  applyCurrentPalette: (targetMode) => {
+    const mode = targetMode || get().paletteApplyMode;
+    const { screenRows, selectedRowIndex, colorRegisters, activeBankId, snapshotHistory } = get();
+    if (screenRows.length === 0) return;
+    snapshotHistory();
+
+    const activeRow = screenRows[selectedRowIndex];
+    const targetBank = activeRow?.bankId || activeBankId;
+
+    const updatedRows = screenRows.map((r, idx) => {
+      if (mode === 'all') {
+        return { ...r, colorRegisters: { ...colorRegisters } };
+      } else if (mode === 'bankRows') {
+        if (r.bankId === targetBank) {
+          return { ...r, colorRegisters: { ...colorRegisters } };
+        }
+        return r;
+      } else {
+        // 'currentRow'
+        if (idx === selectedRowIndex) {
+          return { ...r, colorRegisters: { ...colorRegisters } };
+        }
+        return r;
+      }
+    });
+
+    set({ screenRows: updatedRows, revision: get().revision + 1 });
+  },
+
+  setRowPalette: (rowIndex, registers) => {
+    const { screenRows, snapshotHistory } = get();
+    if (rowIndex < 0 || rowIndex >= screenRows.length) return;
+    snapshotHistory();
+    const updated = [...screenRows];
+    updated[rowIndex] = { ...updated[rowIndex], colorRegisters: { ...registers } };
+    set({
+      screenRows: updated,
+      colorRegisters: rowIndex === get().selectedRowIndex ? { ...registers } : get().colorRegisters,
+      revision: get().revision + 1,
+    });
+  },
+
+  setColorRegister: (register, val) => {
+    const { screenRows, selectedRowIndex, paletteApplyMode, activeBankId } = get();
+    const normalizedVal = val & 0xff;
+    const newGlobalRegisters = {
+      ...get().colorRegisters,
+      [register]: normalizedVal,
+    };
+
+    const activeRow = screenRows[selectedRowIndex];
+    const targetBank = activeRow?.bankId || activeBankId;
+
+    const updatedRows = screenRows.map((r, idx) => {
+      if (paletteApplyMode === 'all') {
+        return {
+          ...r,
+          colorRegisters: {
+            ...r.colorRegisters,
+            [register]: normalizedVal,
+          },
+        };
+      } else if (paletteApplyMode === 'bankRows') {
+        if (r.bankId === targetBank) {
+          return {
+            ...r,
+            colorRegisters: {
+              ...r.colorRegisters,
+              [register]: normalizedVal,
+            },
+          };
+        }
+        return r;
+      } else {
+        // 'currentRow'
+        if (idx === selectedRowIndex) {
+          return {
+            ...r,
+            colorRegisters: {
+              ...r.colorRegisters,
+              [register]: normalizedVal,
+            },
+          };
+        }
+        return r;
+      }
+    });
+
+    set((state) => ({
+      colorRegisters: newGlobalRegisters,
+      screenRows: updatedRows,
       revision: state.revision + 1,
-    })),
+    }));
+  },
 
   snapshotHistory: () => {
     const current = cloneHistorySnapshot(get());
@@ -230,13 +345,18 @@ export const useAppStore = create<AppState>((set, get) => ({
       mode: r.mode,
       bankId: r.bankId,
       charData: new Uint8Array(r.charData),
+      colorRegisters: { ...(r.colorRegisters || previous.colorRegisters) },
     }));
+
+    const restoredActiveRow = restoredRows[previous.selectedCharIndex] || restoredRows[0];
+    const targetColors = restoredActiveRow?.colorRegisters || previous.colorRegisters;
 
     set({
       banks: restoredBanks,
       screenRows: restoredRows,
       activeBankId: previous.activeBankId,
       selectedCharIndex: previous.selectedCharIndex,
+      colorRegisters: targetColors,
       undoStack: undoStack.slice(0, -1),
       redoStack: [...redoStack, current],
       revision: get().revision + 1,
@@ -264,18 +384,24 @@ export const useAppStore = create<AppState>((set, get) => ({
       mode: r.mode,
       bankId: r.bankId,
       charData: new Uint8Array(r.charData),
+      colorRegisters: { ...(r.colorRegisters || next.colorRegisters) },
     }));
+
+    const restoredActiveRow = restoredRows[next.selectedCharIndex] || restoredRows[0];
+    const targetColors = restoredActiveRow?.colorRegisters || next.colorRegisters;
 
     set({
       banks: restoredBanks,
       screenRows: restoredRows,
       activeBankId: next.activeBankId,
       selectedCharIndex: next.selectedCharIndex,
+      colorRegisters: targetColors,
       undoStack: [...undoStack, current],
       redoStack: redoStack.slice(0, -1),
       revision: get().revision + 1,
     });
   },
+
 
   setGlyphPixel: (x, y, value) => {
     const { banks, activeBankId, selectedCharIndex, activeColorBitPair, paintTool } = get();
@@ -429,14 +555,16 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   addRow: (afterIndex) => {
-    const { screenRows, activeBankId, snapshotHistory } = get();
+    const { screenRows, activeBankId, colorRegisters, selectedRowIndex, snapshotHistory } = get();
     snapshotHistory();
     const index = afterIndex !== undefined ? afterIndex + 1 : screenRows.length;
+    const inheritColors = screenRows[selectedRowIndex]?.colorRegisters || colorRegisters;
     const newRow: ScreenRow = {
       id: `row-${Date.now()}-${Math.random()}`,
       mode: 2,
       bankId: activeBankId,
       charData: new Uint8Array(40),
+      colorRegisters: { ...inheritColors },
     };
     const updated = [...screenRows.slice(0, index), newRow, ...screenRows.slice(index)];
     set({ screenRows: updated, revision: get().revision + 1 });
@@ -499,8 +627,17 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ screenRows: updated, revision: get().revision + 1 });
   },
 
+  setModeForBankRows: (bankId, mode) => {
+    const { screenRows, snapshotHistory } = get();
+    snapshotHistory();
+    const updated = screenRows.map((r) =>
+      r.bankId === bankId ? { ...r, mode } : r
+    );
+    set({ screenRows: updated, revision: get().revision + 1 });
+  },
+
   createBank: (name, data) => {
-    const id = `bank-${Date.now()}`;
+    const id = `bank-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
     const bankName = name || `Bank ${Object.keys(get().banks).length + 1}`;
     const bankData = data ? new Uint8Array(data) : new Uint8Array(1024);
 
@@ -543,7 +680,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const source = banks[bankId];
     if (!source) return;
 
-    const newId = `bank-${Date.now()}`;
+    const newId = `bank-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
     const newBank: CharacterBank = {
       id: newId,
       name: `${source.name} (Copy)`,
@@ -631,6 +768,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         mode: r.mode,
         bankId,
         charData: new Uint8Array(r.charData),
+        colorRegisters: { ...parsed.colorRegisters },
       };
     });
 

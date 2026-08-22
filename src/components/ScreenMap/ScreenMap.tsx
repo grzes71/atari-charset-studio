@@ -52,7 +52,7 @@ const RowCanvas: React.FC<RowCanvasProps> = ({ rowIndex }) => {
       ctx,
       row,
       bank,
-      registers: colorRegisters,
+      registers: row.colorRegisters || colorRegisters,
       scale,
       selectedCol: isSelectedRow ? selectedColIndex : null,
       cursorVisible: isSelectedRow,
@@ -142,11 +142,15 @@ export const ScreenMap: React.FC = () => {
     clearRow,
     fillRow,
     setAllRowsModeAndBank,
+    setModeForBankRows,
     selectedCharIndex,
     isInverseActive,
     screenPaintMode,
     setScreenPaintMode,
     typeScreenText,
+    paletteApplyMode,
+    setPaletteApplyMode,
+    applyCurrentPalette,
   } = useAppStore();
 
   const activeRow = screenRows[selectedRowIndex];
@@ -452,6 +456,35 @@ export const ScreenMap: React.FC = () => {
               </select>
             </div>
 
+            {/* Quick Palette Mode Selector for Active Row */}
+            <div className="flex items-center gap-1.5 bg-zinc-950 px-2 py-1 rounded border border-zinc-800">
+              <span className="text-[11px] text-amber-400 font-semibold font-mono">Paleta:</span>
+              <select
+                value={paletteApplyMode}
+                onChange={(e) => {
+                  const mode = e.target.value as 'currentRow' | 'all' | 'bankRows';
+                  setPaletteApplyMode(mode);
+                  applyCurrentPalette(mode);
+                }}
+                className="bg-zinc-900 border border-zinc-700 text-zinc-200 text-xs rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer"
+                title="Wybierz tryb zastosowania palety kolorów"
+              >
+                <option value="currentRow">dla aktualnej linii</option>
+                <option value="all">dla całości</option>
+                <option value="bankRows">dla wierszy tego banku</option>
+              </select>
+            </div>
+
+            {/* Apply Mode to all rows using this bank */}
+            <button
+              onClick={() => setModeForBankRows(activeRow.bankId, activeRow.mode)}
+              title={`Ustaw tryb Antic ${activeRow.mode} dla wszystkich wierszy (${screenRows.filter((r) => r.bankId === activeRow.bankId).length}) używających banku "${banks[activeRow.bankId]?.name || activeRow.bankId}"`}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-amber-400 border border-zinc-700 text-xs font-medium transition cursor-pointer"
+            >
+              <CheckCheck className="w-3.5 h-3.5 text-sky-400" />
+              <span>Dla wierszy tego banku</span>
+            </button>
+
             {/* Apply Mode & Bank to all rows */}
             <button
               onClick={() => setAllRowsModeAndBank(activeRow.mode, activeRow.bankId)}
@@ -459,7 +492,7 @@ export const ScreenMap: React.FC = () => {
               className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 hover:text-amber-200 border border-amber-500/30 text-xs font-medium transition cursor-pointer"
             >
               <CheckCheck className="w-3.5 h-3.5 text-amber-400" />
-              <span>Zastosuj dla wszystkich</span>
+              <span>Dla wszystkich</span>
             </button>
           </div>
 

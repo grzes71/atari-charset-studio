@@ -11,6 +11,7 @@ export interface ScreenRow {
   mode: AnticMode;
   bankId: string;
   charData: Uint8Array; // 40 bytes
+  colorRegisters: ColorRegisters;
 }
 
 export interface ColorRegisters {
@@ -20,6 +21,8 @@ export interface ColorRegisters {
   COLPF2: number; // Playfield 2 (0-255)
   COLPF3: number; // Playfield 3 (0-255)
 }
+
+export type PaletteApplyMode = 'currentRow' | 'all' | 'bankRows';
 
 export type BitPair = 0 | 1 | 2 | 3;
 
@@ -31,3 +34,4 @@ export interface ClipboardGlyph {
   data: Uint8Array; // 8 bytes
   mode: AnticMode;
 }
+
