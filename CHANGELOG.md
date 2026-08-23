@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.6.0 (2026-08-23)
+
+## What's Changed in PR #12 (feat: Show colors in screen map)
+
+### 🚀 Features
+- feat: Show colors in screen map (286d0d7)
+
+
+**Merged by:** @grzes71
+
+
 ## v1.5.0 (2026-08-23)
 
 ## What's Changed in PR #11 (feat: Refactoring charmap panel)
