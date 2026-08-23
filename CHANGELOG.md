@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.4.1 (2026-08-23)
+
+## What's Changed in PR #10 (fix: Fix color palette)
+
+### 🐛 Bug Fixes & Performance
+- fix: Fix color palette (bb15397)
+
+
+**Merged by:** @grzes71
+
+
 ## v1.4.0 (2026-08-22)
 
 ## What's Changed in PR #9 (feat: Support for individual palettes)
