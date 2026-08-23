@@ -12,6 +12,7 @@ import {
 import { useAppStore } from '../../store/appStore';
 import { ScreenMapRenderer } from '../../core/renderers/ScreenMapRenderer';
 import { AnticMode } from '../../types';
+import { atariByteToHex } from '../../utils/atariColorLUT';
 
 interface RowCanvasProps {
   rowIndex: number;
@@ -270,24 +271,26 @@ export const ScreenMap: React.FC = () => {
       {viewTab === 'screen' && (
         <div className="flex flex-col bg-black/90 p-2.5 rounded-lg border border-zinc-800 shadow-inner overflow-x-auto items-center">
           <div className="flex border border-zinc-800 rounded bg-black overflow-hidden relative shadow-2xl">
-            {/* Gutter / Row Numbers */}
-            <div className="flex flex-col select-none bg-zinc-950/90 border-r border-zinc-800 shrink-0 w-11">
+            {/* Gutter / Row Numbers, Mode & Palette Preview */}
+            <div className="flex flex-col select-none bg-zinc-950/90 border-r border-zinc-800 shrink-0">
               {screenRows.map((row, idx) => {
                 const rowHeight = (row.mode === 5 ? 16 : 8) * 2;
                 const isSelected = selectedRowIndex === idx;
+                const colors = row.colorRegisters;
+
                 return (
                   <button
                     key={row.id}
                     onClick={() => setSelectedCell(idx, selectedColIndex)}
-                    title={`Wiersz #${idx} — Kliknij, aby wybrać (Tryb Antic ${row.mode})`}
+                    title={`Wiersz #${idx} — Tryb Antic ${row.mode} | Paleta: BK: $${colors.COLBAK.toString(16).toUpperCase()}, PF0: $${colors.COLPF0.toString(16).toUpperCase()}, PF1: $${colors.COLPF1.toString(16).toUpperCase()}, PF2: $${colors.COLPF2.toString(16).toUpperCase()}, PF3: $${colors.COLPF3.toString(16).toUpperCase()}`}
                     style={{ height: `${rowHeight}px` }}
-                    className={`flex items-center justify-between px-1 font-mono text-[9px] border-b border-zinc-900/50 transition-colors leading-none ${
+                    className={`flex items-center gap-1 px-1.5 font-mono text-[9px] border-b border-zinc-900/50 transition-colors leading-none ${
                       isSelected
                         ? 'bg-amber-500 text-zinc-950 font-bold'
                         : 'text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/60'
                     }`}
                   >
-                    <span>{idx.toString().padStart(2, '0')}</span>
+                    <span className="w-3.5 text-left">{idx.toString().padStart(2, '0')}</span>
                     <span
                       className={`text-[8px] px-0.5 rounded font-mono ${
                         isSelected ? 'bg-zinc-950 text-amber-400' : 'text-zinc-600'
@@ -295,6 +298,30 @@ export const ScreenMap: React.FC = () => {
                     >
                       {row.mode === 5 ? 'A5' : row.mode === 4 ? 'A4' : 'A2'}
                     </span>
+
+                    {/* Color Palette Swatches */}
+                    <div className="flex items-center gap-0.5 ml-0.5">
+                      <span
+                        className="w-1.5 h-2 rounded-[1px] border border-black/60 shadow-xs"
+                        style={{ backgroundColor: atariByteToHex(colors.COLBAK) }}
+                      />
+                      <span
+                        className="w-1.5 h-2 rounded-[1px] border border-black/60 shadow-xs"
+                        style={{ backgroundColor: atariByteToHex(colors.COLPF0) }}
+                      />
+                      <span
+                        className="w-1.5 h-2 rounded-[1px] border border-black/60 shadow-xs"
+                        style={{ backgroundColor: atariByteToHex(colors.COLPF1) }}
+                      />
+                      <span
+                        className="w-1.5 h-2 rounded-[1px] border border-black/60 shadow-xs"
+                        style={{ backgroundColor: atariByteToHex(colors.COLPF2) }}
+                      />
+                      <span
+                        className="w-1.5 h-2 rounded-[1px] border border-black/60 shadow-xs"
+                        style={{ backgroundColor: atariByteToHex(colors.COLPF3) }}
+                      />
+                    </div>
                   </button>
                 );
               })}
@@ -335,7 +362,7 @@ export const ScreenMap: React.FC = () => {
               }`}
             >
               {/* Row Number & Display List Controls */}
-              <div className="flex items-center gap-1.5 w-56 shrink-0">
+              <div className="flex items-center gap-1.5 w-60 shrink-0">
                 <span className="font-mono text-[11px] text-zinc-400 w-5 text-right font-bold">
                   {idx}
                 </span>
@@ -365,6 +392,35 @@ export const ScreenMap: React.FC = () => {
                     </option>
                   ))}
                 </select>
+
+                {/* Row Palette Preview in Display List */}
+                <div className="flex items-center gap-0.5 bg-black/60 px-1 py-0.5 rounded border border-zinc-800">
+                  <span
+                    className="w-2 h-2 rounded-[1px] border border-black/60 shadow-xs"
+                    style={{ backgroundColor: atariByteToHex(row.colorRegisters.COLBAK) }}
+                    title={`COLBAK: $${row.colorRegisters.COLBAK.toString(16).toUpperCase().padStart(2, '0')}`}
+                  />
+                  <span
+                    className="w-2 h-2 rounded-[1px] border border-black/60 shadow-xs"
+                    style={{ backgroundColor: atariByteToHex(row.colorRegisters.COLPF0) }}
+                    title={`COLPF0: $${row.colorRegisters.COLPF0.toString(16).toUpperCase().padStart(2, '0')}`}
+                  />
+                  <span
+                    className="w-2 h-2 rounded-[1px] border border-black/60 shadow-xs"
+                    style={{ backgroundColor: atariByteToHex(row.colorRegisters.COLPF1) }}
+                    title={`COLPF1: $${row.colorRegisters.COLPF1.toString(16).toUpperCase().padStart(2, '0')}`}
+                  />
+                  <span
+                    className="w-2 h-2 rounded-[1px] border border-black/60 shadow-xs"
+                    style={{ backgroundColor: atariByteToHex(row.colorRegisters.COLPF2) }}
+                    title={`COLPF2: $${row.colorRegisters.COLPF2.toString(16).toUpperCase().padStart(2, '0')}`}
+                  />
+                  <span
+                    className="w-2 h-2 rounded-[1px] border border-black/60 shadow-xs"
+                    style={{ backgroundColor: atariByteToHex(row.colorRegisters.COLPF3) }}
+                    title={`COLPF3: $${row.colorRegisters.COLPF3.toString(16).toUpperCase().padStart(2, '0')}`}
+                  />
+                </div>
 
                 {/* Row Management Buttons */}
                 <div className="flex items-center gap-0.5">
