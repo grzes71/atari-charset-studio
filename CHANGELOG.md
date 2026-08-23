@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.5.0 (2026-08-23)
+
+## What's Changed in PR #11 (feat: Refactoring charmap panel)
+
+### 🚀 Features
+- feat: Refactoring charmap panel (b7fe3a5)
+
+
+**Merged by:** @grzes71
+
+
 ## v1.4.1 (2026-08-23)
 
 ## What's Changed in PR #10 (fix: Fix color palette)
