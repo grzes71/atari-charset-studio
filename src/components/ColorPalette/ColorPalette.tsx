@@ -15,11 +15,9 @@ export const ColorPalette: React.FC = () => {
     colorRegisters,
     setColorRegister,
     paletteApplyMode,
-    setPaletteApplyMode,
-    applyCurrentPalette,
     selectedRowIndex,
-    screenRows,
     banks,
+    screenRows,
   } = useAppStore();
   const [activeReg, setActiveReg] = useState<keyof ColorRegisters>('COLPF2');
 
@@ -68,40 +66,18 @@ export const ColorPalette: React.FC = () => {
     <div className="glass-panel rounded-xl p-4 flex flex-col gap-4 shadow-lg border border-zinc-800">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-800 pb-2.5">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2">
-            <Palette className="w-4 h-4 text-amber-400" />
-            <h2 className="text-sm font-semibold text-zinc-100 uppercase tracking-wide">
-              Rejestry Kolorów Atari (GTIA)
-            </h2>
-          </div>
-
-          {/* Palette Scope Dropdown Selector */}
-          <div className="flex items-center gap-1.5 bg-zinc-900 px-2.5 py-1 rounded-lg border border-zinc-700 shadow-sm">
-            <span className="text-xs font-semibold text-amber-400 whitespace-nowrap">
-              Paleta:
-            </span>
-            <select
-              value={paletteApplyMode}
-              onChange={(e) => {
-                const mode = e.target.value as 'currentRow' | 'all' | 'bankRows';
-                setPaletteApplyMode(mode);
-                applyCurrentPalette(mode);
-              }}
-              className="bg-zinc-950 border border-zinc-700 text-zinc-100 text-xs font-medium rounded px-2 py-0.5 focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer"
-              title="Wybierz tryb zastosowania palety kolorów"
-            >
-              <option value="currentRow">dla aktualnej linii</option>
-              <option value="all">dla całości</option>
-              <option value="bankRows">dla wierszy tego banku</option>
-            </select>
-
-            <span className="text-[10px] text-zinc-400 font-mono hidden md:inline ml-1">
-              {paletteApplyMode === 'currentRow' && `(#${selectedRowIndex})`}
-              {paletteApplyMode === 'all' && `(wszystkie ${screenRows.length})`}
-              {paletteApplyMode === 'bankRows' && activeBank && `(${activeBank.name})`}
-            </span>
-          </div>
+        <div className="flex items-center gap-2.5">
+          <Palette className="w-4 h-4 text-amber-400" />
+          <h2 className="text-sm font-semibold text-zinc-100 uppercase tracking-wide">
+            Rejestry Kolorów Atari (GTIA)
+          </h2>
+          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-400">
+            {paletteApplyMode === 'currentRow'
+              ? `Wiersz #${selectedRowIndex}`
+              : paletteApplyMode === 'bankRows'
+              ? `Wiersze banku (${activeBank?.name || 'Bank'})`
+              : 'Całość ekranu'}
+          </span>
         </div>
 
         {/* Preset selector */}

@@ -8,7 +8,6 @@ import {
   Type,
   Brush,
   Layers,
-  CheckCheck,
 } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { ScreenMapRenderer } from '../../core/renderers/ScreenMapRenderer';
@@ -141,15 +140,14 @@ export const ScreenMap: React.FC = () => {
     moveRow,
     clearRow,
     fillRow,
-    setAllRowsModeAndBank,
     setModeForBankRows,
+    setAllRowsMode,
+    setAllRowsBank,
     selectedCharIndex,
     isInverseActive,
     screenPaintMode,
     setScreenPaintMode,
     typeScreenText,
-    paletteApplyMode,
-    setPaletteApplyMode,
     applyCurrentPalette,
   } = useAppStore();
 
@@ -416,19 +414,50 @@ export const ScreenMap: React.FC = () => {
         </div>
       )}
 
-      {/* Active Row Inspector & Quick Actions Bar */}
+      {/* Active Row Inspector & Quick Actions Panel (5 Rows Layout) */}
       {activeRow && (
-        <div className="flex flex-wrap items-center justify-between gap-3 bg-zinc-900/90 p-2.5 rounded-lg border border-zinc-800 text-xs">
-          {/* Active Row Info & Mode/Bank Selectors */}
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="text-zinc-300 font-medium">
-              Aktywny wiersz: <strong className="text-amber-400 font-mono">#{selectedRowIndex}</strong>{' '}
-              <span className="text-zinc-500">(Kolumna {selectedColIndex})</span>
+        <div className="flex flex-col gap-2.5 bg-zinc-900/90 p-3 rounded-lg border border-zinc-800 text-xs shadow-md">
+          {/* Row 1: Active Row Info */}
+          <div className="flex items-center justify-between border-b border-zinc-800/80 pb-2">
+            <span className="text-zinc-300 font-medium flex items-center gap-1.5">
+              <span>Aktywny wiersz:</span>
+              <strong className="text-amber-400 font-mono text-sm">#{selectedRowIndex}</strong>
+              <span className="text-zinc-500 font-mono text-[11px]">(Kolumna {selectedColIndex})</span>
             </span>
+            <span className="font-mono text-[10px] text-zinc-500">
+              Wiersz {selectedRowIndex + 1} z {screenRows.length}
+            </span>
+          </div>
 
-            {/* Quick Mode Changer for Active Row */}
+          {/* Row 2: Bank Selector */}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[11px] text-zinc-400 font-mono w-24 shrink-0">Bank:</span>
             <div className="flex items-center gap-1.5 bg-zinc-950 px-2 py-1 rounded border border-zinc-800">
-              <span className="text-[11px] text-zinc-400 font-mono">Tryb ANTIC:</span>
+              <select
+                value={activeRow.bankId}
+                onChange={(e) => setRowBank(selectedRowIndex, e.target.value)}
+                className="bg-zinc-900 border border-zinc-700 text-zinc-200 text-xs rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer min-w-[180px]"
+              >
+                {Object.values(banks).map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <button
+              onClick={() => setAllRowsBank(activeRow.bankId)}
+              title={`Ustaw bank "${banks[activeRow.bankId]?.name || activeRow.bankId}" dla wszystkich wierszy ekranu`}
+              className="px-2.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-amber-400 border border-zinc-700 text-xs font-medium transition cursor-pointer"
+            >
+              dla całości
+            </button>
+          </div>
+
+          {/* Row 3: Antic Mode Selector + Action Buttons */}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[11px] text-zinc-400 font-mono w-24 shrink-0">Tryb ANTIC:</span>
+            <div className="flex items-center gap-1.5 bg-zinc-950 px-2 py-1 rounded border border-zinc-800">
               <select
                 value={activeRow.mode}
                 onChange={(e) => setRowMode(selectedRowIndex, Number(e.target.value) as AnticMode)}
@@ -439,65 +468,43 @@ export const ScreenMap: React.FC = () => {
                 <option value={5}>Antic 5 (Multi 4-color, 16px)</option>
               </select>
             </div>
-
-            {/* Quick Bank Changer for Active Row */}
-            <div className="flex items-center gap-1.5 bg-zinc-950 px-2 py-1 rounded border border-zinc-800">
-              <span className="text-[11px] text-zinc-400 font-mono">Bank:</span>
-              <select
-                value={activeRow.bankId}
-                onChange={(e) => setRowBank(selectedRowIndex, e.target.value)}
-                className="bg-zinc-900 border border-zinc-700 text-zinc-200 text-xs rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer"
-              >
-                {Object.values(banks).map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Quick Palette Mode Selector for Active Row */}
-            <div className="flex items-center gap-1.5 bg-zinc-950 px-2 py-1 rounded border border-zinc-800">
-              <span className="text-[11px] text-amber-400 font-semibold font-mono">Paleta:</span>
-              <select
-                value={paletteApplyMode}
-                onChange={(e) => {
-                  const mode = e.target.value as 'currentRow' | 'all' | 'bankRows';
-                  setPaletteApplyMode(mode);
-                  applyCurrentPalette(mode);
-                }}
-                className="bg-zinc-900 border border-zinc-700 text-zinc-200 text-xs rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer"
-                title="Wybierz tryb zastosowania palety kolorów"
-              >
-                <option value="currentRow">dla aktualnej linii</option>
-                <option value="all">dla całości</option>
-                <option value="bankRows">dla wierszy tego banku</option>
-              </select>
-            </div>
-
-            {/* Apply Mode to all rows using this bank */}
             <button
               onClick={() => setModeForBankRows(activeRow.bankId, activeRow.mode)}
               title={`Ustaw tryb Antic ${activeRow.mode} dla wszystkich wierszy (${screenRows.filter((r) => r.bankId === activeRow.bankId).length}) używających banku "${banks[activeRow.bankId]?.name || activeRow.bankId}"`}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-amber-400 border border-zinc-700 text-xs font-medium transition cursor-pointer"
+              className="px-2.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-sky-400 border border-zinc-700 text-xs font-medium transition cursor-pointer"
             >
-              <CheckCheck className="w-3.5 h-3.5 text-sky-400" />
-              <span>Dla wierszy tego banku</span>
+              dla wierszy tego banku
             </button>
-
-            {/* Apply Mode & Bank to all rows */}
             <button
-              onClick={() => setAllRowsModeAndBank(activeRow.mode, activeRow.bankId)}
-              title={`Ustaw tryb Antic ${activeRow.mode} oraz bank "${banks[activeRow.bankId]?.name || activeRow.bankId}" dla wszystkich wierszy ekranu`}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 hover:text-amber-200 border border-amber-500/30 text-xs font-medium transition cursor-pointer"
+              onClick={() => setAllRowsMode(activeRow.mode)}
+              title={`Ustaw tryb Antic ${activeRow.mode} dla wszystkich wierszy ekranu`}
+              className="px-2.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-amber-400 border border-zinc-700 text-xs font-medium transition cursor-pointer"
             >
-              <CheckCheck className="w-3.5 h-3.5 text-amber-400" />
-              <span>Dla wszystkich</span>
+              dla całości
             </button>
           </div>
 
-          {/* Row Action Buttons */}
-          <div className="flex flex-wrap items-center gap-1.5">
+          {/* Row 4: Palette Action Buttons */}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[11px] text-amber-400 font-semibold font-mono w-24 shrink-0">Paleta:</span>
+            <button
+              onClick={() => applyCurrentPalette('bankRows')}
+              title={`Przypisz aktualną paletę kolorów wszystkim wierszom (${screenRows.filter((r) => r.bankId === activeRow.bankId).length}) używającym banku "${banks[activeRow.bankId]?.name || activeRow.bankId}"`}
+              className="px-2.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-sky-400 border border-zinc-700 text-xs font-medium transition cursor-pointer"
+            >
+              dla wierszy tego banku
+            </button>
+            <button
+              onClick={() => applyCurrentPalette('all')}
+              title="Przypisz aktualną paletę kolorów wszystkim wierszom mapy ekranu"
+              className="px-2.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-amber-400 border border-zinc-700 text-xs font-medium transition cursor-pointer"
+            >
+              dla całości
+            </button>
+          </div>
+
+          {/* Row 5: Action Buttons */}
+          <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-zinc-800/80">
             {/* Move Up/Down */}
             <button
               onClick={() => moveRow(selectedRowIndex, 'up')}
@@ -551,7 +558,7 @@ export const ScreenMap: React.FC = () => {
               <button
                 onClick={() => deleteRow(selectedRowIndex)}
                 title="Usuń ten wiersz"
-                className="p-1 px-2 rounded bg-zinc-800 hover:bg-red-950/60 text-zinc-400 hover:text-red-400 border border-transparent hover:border-red-800/40 transition flex items-center gap-1"
+                className="p-1 px-2 rounded bg-zinc-800 hover:bg-red-950/60 text-zinc-400 hover:text-red-400 border border-transparent hover:border-red-800/40 transition flex items-center gap-1 ml-auto"
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 <span className="text-[11px]">Usuń</span>

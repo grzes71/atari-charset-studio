@@ -83,6 +83,8 @@ export interface AppState {
   fillRow: (rowIndex: number, charCode: number) => void;
   setAllRowsModeAndBank: (mode: AnticMode, bankId: string) => void;
   setModeForBankRows: (bankId: string, mode: AnticMode) => void;
+  setAllRowsMode: (mode: AnticMode) => void;
+  setAllRowsBank: (bankId: string) => void;
 
   // Bank management
   createBank: (name?: string, data?: Uint8Array) => string;
@@ -633,6 +635,26 @@ export const useAppStore = create<AppState>((set, get) => ({
     const updated = screenRows.map((r) =>
       r.bankId === bankId ? { ...r, mode } : r
     );
+    set({ screenRows: updated, revision: get().revision + 1 });
+  },
+
+  setAllRowsMode: (mode) => {
+    const { screenRows, snapshotHistory } = get();
+    snapshotHistory();
+    const updated = screenRows.map((r) => ({
+      ...r,
+      mode,
+    }));
+    set({ screenRows: updated, revision: get().revision + 1 });
+  },
+
+  setAllRowsBank: (bankId) => {
+    const { screenRows, snapshotHistory } = get();
+    snapshotHistory();
+    const updated = screenRows.map((r) => ({
+      ...r,
+      bankId,
+    }));
     set({ screenRows: updated, revision: get().revision + 1 });
   },
 

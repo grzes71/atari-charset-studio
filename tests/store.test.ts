@@ -17,6 +17,27 @@ describe('AppStore - Row & Bank operations', () => {
     }
   });
 
+  it('setAllRowsMode updates mode for all rows without altering their bankId', () => {
+    const { setAllRowsMode } = useAppStore.getState();
+    setAllRowsMode(4);
+
+    const rows = useAppStore.getState().screenRows;
+    for (const row of rows) {
+      expect(row.mode).toBe(4);
+    }
+  });
+
+  it('setAllRowsBank updates bankId for all rows without altering their mode', () => {
+    const { createBank, setAllRowsBank } = useAppStore.getState();
+    const bankB = createBank('Bank Beta');
+    setAllRowsBank(bankB);
+
+    const rows = useAppStore.getState().screenRows;
+    for (const row of rows) {
+      expect(row.bankId).toBe(bankB);
+    }
+  });
+
   it('importAtrViewProject updates colorRegisters, banks, and screenRows', () => {
     const { importAtrViewProject } = useAppStore.getState();
 
