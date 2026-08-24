@@ -6,12 +6,12 @@ import { ColorPalette } from './components/ColorPalette/ColorPalette';
 import { ScreenMap } from './components/ScreenMap/ScreenMap';
 import { useAppStore } from './store/appStore';
 import { importFontBinary } from './utils/fileIO';
-import { importAtrViewFile } from './utils/atrviewIO';
+import { importAnyProjectFile } from './utils/projectIO';
 import { UploadCloud } from 'lucide-react';
 
 export const App: React.FC = () => {
   const [isDragOver, setIsDragOver] = useState(false);
-  const { undo, redo, importFont, importAtrViewProject } = useAppStore();
+  const { undo, redo, importFont, importProject, importAtrViewProject } = useAppStore();
 
   // Global Keyboard Shortcuts (Undo / Redo)
   useEffect(() => {
@@ -33,7 +33,7 @@ export const App: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [undo, redo]);
 
-  // Global Drag and Drop for .atrview and .fnt / .rom files
+  // Global Drag and Drop for .json, .atrview and .fnt / .rom files
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(true);
@@ -52,9 +52,13 @@ export const App: React.FC = () => {
       const fileNameLower = file.name.toLowerCase();
 
       try {
-        if (fileNameLower.endsWith('.atrview') || fileNameLower.endsWith('.json')) {
-          const parsed = await importAtrViewFile(file);
-          importAtrViewProject(parsed);
+        if (fileNameLower.endsWith('.json') || fileNameLower.endsWith('.atrview')) {
+          const res = await importAnyProjectFile(file);
+          if (res.type === 'acs') {
+            importProject(res.project);
+          } else {
+            importAtrViewProject(res.project);
+          }
         } else {
           const data = await importFontBinary(file);
           const bankName = file.name.replace(/\.[^/.]+$/, '');
@@ -78,10 +82,10 @@ export const App: React.FC = () => {
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex flex-col items-center justify-center border-4 border-dashed border-amber-400 p-8">
           <UploadCloud className="w-16 h-16 text-amber-400 animate-bounce mb-4" />
           <h3 className="text-xl font-bold text-amber-300 font-pixel mb-2">
-            Upuść plik projektu (.atrview) lub fontu (.fnt / .rom)
+            Upuść plik projektu (.json / .atrview) lub fontu (.fnt / .rom)
           </h3>
-          <p className="text-zinc-400 text-sm">
-            Projekty .atrview wczytują kompletny stan edytora (do 4 banków, ekran i kolory), a .fnt tworzy nowy bank znaków (1024B)
+          <p className="text-zinc-400 text-sm max-w-lg text-center">
+            Pliki .json wczytują pełny projekt ze wszystkimi bankami, mapą ekranu i paletami. Projekty .atrview wczytują kompatybilne dane z Atari FontMaker, a .fnt tworzy nowy bank znaków (1024B).
           </p>
         </div>
       )}

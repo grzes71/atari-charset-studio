@@ -95,7 +95,8 @@ export interface AppState {
   loadRomFont: () => void;
   importFont: (data: Uint8Array, name?: string) => string;
 
-  // Project management (.atrview)
+  // Project management (.json & .atrview)
+  importProject: (project: import('../types').StudioProject) => void;
   importAtrViewProject: (parsed: import('../utils/atrviewIO').ParsedAtrView) => void;
 
   // Undo / Redo
@@ -764,6 +765,54 @@ export const useAppStore = create<AppState>((set, get) => ({
       revision: state.revision + 1,
     }));
     return id;
+  },
+
+  importProject: (project) => {
+    const { snapshotHistory } = get();
+    snapshotHistory();
+
+    const newBanks: Record<string, CharacterBank> = {};
+    for (const [id, bank] of Object.entries(project.banks)) {
+      newBanks[id] = {
+        id: bank.id || id,
+        name: bank.name || `Font ${id}`,
+        data: new Uint8Array(bank.data),
+      };
+    }
+
+    const firstBankId = Object.keys(newBanks)[0] || DEFAULT_BANK_ID;
+    const activeBankId = (project.activeBankId && newBanks[project.activeBankId])
+      ? project.activeBankId
+      : firstBankId;
+
+    const newRows: ScreenRow[] = project.screenRows.map((r, rowIdx) => {
+      const bankId = (r.bankId && newBanks[r.bankId]) ? r.bankId : firstBankId;
+      return {
+        id: r.id || `row-${rowIdx}-${Date.now()}-${Math.random()}`,
+        mode: r.mode ?? 2,
+        bankId,
+        charData: new Uint8Array(r.charData),
+        colorRegisters: { ...(r.colorRegisters || project.colorRegisters || DEFAULT_COLOR_REGISTERS) },
+      };
+    });
+
+    const editorState = project.editorState;
+
+    set((state) => ({
+      banks: newBanks,
+      activeBankId,
+      screenRows: newRows.length > 0 ? newRows : state.screenRows,
+      colorRegisters: { ...(project.colorRegisters || DEFAULT_COLOR_REGISTERS) },
+      paletteApplyMode: project.paletteApplyMode || state.paletteApplyMode,
+      selectedRowIndex: editorState?.selectedRowIndex ?? 0,
+      selectedColIndex: editorState?.selectedColIndex ?? 0,
+      selectedCharIndex: editorState?.selectedCharIndex ?? 0,
+      activeColorBitPair: editorState?.activeColorBitPair ?? state.activeColorBitPair,
+      paintTool: editorState?.paintTool ?? state.paintTool,
+      screenPaintMode: editorState?.screenPaintMode ?? state.screenPaintMode,
+      isInverseActive: editorState?.isInverseActive ?? state.isInverseActive,
+      revision: state.revision + 1,
+    }));
   },
 
   importAtrViewProject: (parsed) => {

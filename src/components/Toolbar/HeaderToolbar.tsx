@@ -10,10 +10,13 @@ import {
   Trash2,
   Layers,
   FileCode,
+  Save,
+  FolderOpen,
 } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { exportFontBinary, importFontBinary } from '../../utils/fileIO';
 import { exportAtrViewFile, importAtrViewFile } from '../../utils/atrviewIO';
+import { exportProjectFile, importAnyProjectFile } from '../../utils/projectIO';
 
 export const HeaderToolbar: React.FC = () => {
   const {
@@ -21,12 +24,21 @@ export const HeaderToolbar: React.FC = () => {
     activeBankId,
     screenRows,
     colorRegisters,
+    paletteApplyMode,
+    selectedCharIndex,
+    activeColorBitPair,
+    paintTool,
+    screenPaintMode,
+    isInverseActive,
+    selectedRowIndex,
+    selectedColIndex,
     setActiveBank,
     createBank,
     duplicateBank,
     deleteBank,
     loadRomFont,
     importFont,
+    importProject,
     importAtrViewProject,
     undo,
     redo,
@@ -34,8 +46,32 @@ export const HeaderToolbar: React.FC = () => {
     redoStack,
   } = useAppStore();
 
-  const fntInputRef = useRef<HTMLInputElement>(null);
+  const jsonInputRef = useRef<HTMLInputElement>(null);
   const atrviewInputRef = useRef<HTMLInputElement>(null);
+  const fntInputRef = useRef<HTMLInputElement>(null);
+
+  // Export full project as native JSON
+  const handleExportProject = () => {
+    const activeBank = banks[activeBankId];
+    const baseName = activeBank ? activeBank.name.replace(/[^a-z0-9_-]/gi, '_').toLowerCase() : 'atari_project';
+    exportProjectFile(
+      {
+        banks,
+        activeBankId,
+        screenRows,
+        colorRegisters,
+        paletteApplyMode,
+        selectedCharIndex,
+        activeColorBitPair,
+        paintTool,
+        screenPaintMode,
+        isInverseActive,
+        selectedRowIndex,
+        selectedColIndex,
+      },
+      `${baseName}.json`
+    );
+  };
 
   // Export active font as raw .fnt (1024B)
   const handleExportFnt = () => {
@@ -59,6 +95,25 @@ export const HeaderToolbar: React.FC = () => {
       },
       `${baseName}.atrview`
     );
+  };
+
+  // Handle native .json (or auto-detected) project file selection
+  const handleJsonFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      try {
+        const file = files[0];
+        const res = await importAnyProjectFile(file);
+        if (res.type === 'acs') {
+          importProject(res.project);
+        } else {
+          importAtrViewProject(res.project);
+        }
+      } catch (err: unknown) {
+        alert(err instanceof Error ? err.message : 'Błąd podczas importu pliku projektu.');
+      }
+      e.target.value = '';
+    }
   };
 
   // Handle .fnt file selection
@@ -196,8 +251,17 @@ export const HeaderToolbar: React.FC = () => {
         {/* Import Group */}
         <div className="flex items-center bg-zinc-900/80 p-0.5 rounded-lg border border-zinc-800">
           <button
+            onClick={() => jsonInputRef.current?.click()}
+            title="Wczytaj kompletny projekt (.json / .acs.json)"
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded hover:bg-zinc-800 text-xs font-medium text-amber-400 hover:text-amber-300 transition"
+          >
+            <FolderOpen className="w-3.5 h-3.5" />
+            <span>.json</span>
+          </button>
+          <span className="text-zinc-700">|</span>
+          <button
             onClick={() => atrviewInputRef.current?.click()}
-            title="Wczytaj kompletny projekt Atari FontMaker (.atrview)"
+            title="Wczytaj projekt Atari FontMaker (.atrview)"
             className="flex items-center gap-1 px-2.5 py-1.5 rounded hover:bg-zinc-800 text-xs font-medium text-emerald-400 hover:text-emerald-300 transition"
           >
             <Upload className="w-3.5 h-3.5" />
@@ -214,6 +278,13 @@ export const HeaderToolbar: React.FC = () => {
           </button>
         </div>
 
+        <input
+          ref={jsonInputRef}
+          type="file"
+          accept=".json,.acs.json,.atrview"
+          onChange={handleJsonFileChange}
+          className="hidden"
+        />
         <input
           ref={atrviewInputRef}
           type="file"
@@ -232,20 +303,28 @@ export const HeaderToolbar: React.FC = () => {
         {/* Export Group */}
         <div className="flex items-center bg-zinc-900/80 p-0.5 rounded-lg border border-zinc-800">
           <button
+            onClick={handleExportProject}
+            title="Zapisz kompletny projekt Atari Charset Studio (.json)"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-zinc-950 font-semibold text-xs shadow-lg shadow-amber-500/20 transition transform active:scale-95"
+          >
+            <Save className="w-3.5 h-3.5" />
+            <span>Zapisz projekt (.json)</span>
+          </button>
+          <button
             onClick={handleExportAtrView}
-            title="Zapisz kompletny projekt (.atrview) dla Atari FontMaker"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 hover:text-emerald-200 border border-emerald-500/30 text-xs font-medium transition"
+            title="Zapisz projekt (.atrview) kompatybilny z Atari FontMaker"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 ml-1 rounded-md bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 hover:text-emerald-200 border border-emerald-500/30 text-xs font-medium transition"
           >
             <FileCode className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Zapisz .atrview</span>
+            <span className="hidden sm:inline">.atrview</span>
           </button>
           <button
             onClick={handleExportFnt}
             title="Pobierz aktywny bank jako surowy plik .fnt (1024B)"
-            className="flex items-center gap-1.5 px-3 py-1.5 ml-1 rounded-md bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-zinc-950 font-semibold text-xs shadow-lg shadow-amber-500/20 transition transform active:scale-95"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 ml-1 rounded-md bg-zinc-800 hover:bg-zinc-700 text-zinc-200 hover:text-white border border-zinc-700 text-xs font-medium transition"
           >
-            <Download className="w-3.5 h-3.5" />
-            <span>Pobierz .fnt</span>
+            <Download className="w-3.5 h-3.5 text-sky-400" />
+            <span className="hidden sm:inline">.fnt</span>
           </button>
         </div>
       </div>
