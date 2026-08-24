@@ -138,7 +138,8 @@ Aplikacja uruchomi się lokalnie pod adresem: **[http://localhost:3000](http://l
   * Wybór trybu graficznego: `Antic 2 (Hires)`, `Antic 4 (Multi)` lub `Antic 5 (Double)`.
   * Przypisanie banku znaków do danej linii tekstu.
   * Przenoszenie wiersza w górę / w dół oraz usuwanie wiersza.
-* **Tryb Malowania (Pędzel Glifu):** Klikaj i przeciągaj po wierszach ekranu, aby stawiać wybrany z banku znak.
+* **Tryb Malowania (Lewy Przycisk Myszy):** Klikaj i przeciągaj po wierszach ekranu, aby stawiać wybrany z banku znak.
+* **Próbnik / Pipeta Znaku (Prawy Przycisk Myszy):** Kliknięcie prawym przyciskiem myszy na dowolnym znaku na mapie ekranu natychmiast aktywuje ten znak w panelu *Zestaw Znaków i Paleta* (oraz w edytorze glifu), przełączając aktywny bank oraz stan inwersji / 5. koloru.
 * **Tryb Wpisywania Tekstu:** Wpisz tekst w polu tekstowym i kliknij *Wstaw* — litery zostaną automatycznie przekonwertowane na kody ekranowe Atari i umieszczone w wybranym wierszu.
 * **Wypełnij / Wyczyść:** Przyciski szybkiego wypełnienia wiersza aktywnym znakiem lub wyczyszczenia spacjami.
 

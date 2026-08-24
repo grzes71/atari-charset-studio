@@ -16,9 +16,10 @@ import { atariByteToHex } from '../../utils/atariColorLUT';
 
 interface RowCanvasProps {
   rowIndex: number;
+  scale?: number;
 }
 
-const RowCanvas: React.FC<RowCanvasProps> = ({ rowIndex }) => {
+const RowCanvas: React.FC<RowCanvasProps> = ({ rowIndex, scale = 2.5 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isPainting, setIsPainting] = useState(false);
 
@@ -27,7 +28,10 @@ const RowCanvas: React.FC<RowCanvasProps> = ({ rowIndex }) => {
     banks,
     colorRegisters,
     selectedCharIndex,
+    setSelectedCharIndex,
     isInverseActive,
+    setIsInverseActive,
+    setActiveBank,
     selectedRowIndex,
     selectedColIndex,
     setSelectedCell,
@@ -40,7 +44,6 @@ const RowCanvas: React.FC<RowCanvasProps> = ({ rowIndex }) => {
   const row = screenRows[rowIndex];
   const bank = banks[row?.bankId] || Object.values(banks)[0];
   const isSelectedRow = selectedRowIndex === rowIndex;
-  const scale = 2;
 
   const renderRow = useCallback(() => {
     const canvas = canvasRef.current;
@@ -57,7 +60,7 @@ const RowCanvas: React.FC<RowCanvasProps> = ({ rowIndex }) => {
       selectedCol: isSelectedRow ? selectedColIndex : null,
       cursorVisible: isSelectedRow,
     });
-  }, [row, bank, colorRegisters, isSelectedRow, selectedColIndex, revision]);
+  }, [row, bank, colorRegisters, isSelectedRow, selectedColIndex, scale, revision]);
 
   useEffect(() => {
     renderRow();
@@ -76,6 +79,24 @@ const RowCanvas: React.FC<RowCanvasProps> = ({ rowIndex }) => {
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const col = getColFromEvent(e);
     if (col === null) return;
+
+    // Right-click (Pipeta / Próbnik znaku): aktywuje kliknięty znak w Zestawie Znaków i Palecie
+    if (e.button === 2) {
+      e.preventDefault();
+      const charCode = row.charData[col] ?? 0;
+      const glyphIndex = charCode & 0x7f;
+      const isInv = (charCode & 0x80) !== 0;
+
+      if (row.bankId && banks[row.bankId]) {
+        setActiveBank(row.bankId);
+      }
+      setSelectedCharIndex(glyphIndex);
+      setIsInverseActive(isInv);
+      setSelectedCell(rowIndex, col);
+      return;
+    }
+
+    if (e.button !== 0) return; // Malowanie tylko lewym przyciskiem myszy
 
     setSelectedCell(rowIndex, col);
     snapshotHistory();
@@ -103,7 +124,7 @@ const RowCanvas: React.FC<RowCanvasProps> = ({ rowIndex }) => {
   if (!row || !bank) return null;
 
   const height = (row.mode === 5 ? 16 : 8) * scale;
-  const width = 40 * 8 * scale; // 640px
+  const width = 40 * 8 * scale; // 800px at scale 2.5
 
   return (
     <canvas
@@ -114,9 +135,10 @@ const RowCanvas: React.FC<RowCanvasProps> = ({ rowIndex }) => {
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseLeave}
+      onContextMenu={(e) => e.preventDefault()}
       className="cursor-crosshair block"
       style={{
-        width: '640px',
+        width: `${width}px`,
         maxWidth: '100%',
         imageRendering: 'pixelated',
         height: `${height}px`,
@@ -128,6 +150,7 @@ const RowCanvas: React.FC<RowCanvasProps> = ({ rowIndex }) => {
 export const ScreenMap: React.FC = () => {
   const [textInput, setTextInput] = useState('');
   const [viewTab, setViewTab] = useState<'screen' | 'displayList'>('screen');
+  const [zoomScale, setZoomScale] = useState<number>(2.5); // Default 125% (800px)
   const {
     screenRows,
     banks,
@@ -178,6 +201,43 @@ export const ScreenMap: React.FC = () => {
 
         {/* View Switch & Tools */}
         <div className="flex flex-wrap items-center gap-2">
+          {/* Zoom Level Toggle */}
+          <div className="flex items-center bg-zinc-900 p-0.5 rounded-lg border border-zinc-800 text-xs font-mono">
+            <button
+              onClick={() => setZoomScale(2)}
+              title="Powiększenie 100% (640px szerokości)"
+              className={`px-2 py-1 rounded transition font-medium ${
+                zoomScale === 2
+                  ? 'bg-zinc-800 text-amber-400 font-bold shadow'
+                  : 'text-zinc-400 hover:text-zinc-200'
+              }`}
+            >
+              100%
+            </button>
+            <button
+              onClick={() => setZoomScale(2.5)}
+              title="Powiększenie 125% (800px szerokości - zalecane)"
+              className={`px-2 py-1 rounded transition font-medium ${
+                zoomScale === 2.5
+                  ? 'bg-zinc-800 text-amber-400 font-bold shadow'
+                  : 'text-zinc-400 hover:text-zinc-200'
+              }`}
+            >
+              125%
+            </button>
+            <button
+              onClick={() => setZoomScale(3)}
+              title="Powiększenie 150% (960px szerokości)"
+              className={`px-2 py-1 rounded transition font-medium ${
+                zoomScale === 3
+                  ? 'bg-zinc-800 text-amber-400 font-bold shadow'
+                  : 'text-zinc-400 hover:text-zinc-200'
+              }`}
+            >
+              150%
+            </button>
+          </div>
+
           {/* Tab View Toggle */}
           <div className="flex items-center bg-zinc-900 p-0.5 rounded-lg border border-zinc-800 text-xs">
             <button
@@ -189,7 +249,7 @@ export const ScreenMap: React.FC = () => {
               }`}
             >
               <Tv className="w-3.5 h-3.5" />
-              <span>Ekran CRT (Kompaktowy)</span>
+              <span>Ekran CRT</span>
             </button>
             <button
               onClick={() => setViewTab('displayList')}
@@ -200,7 +260,7 @@ export const ScreenMap: React.FC = () => {
               }`}
             >
               <Layers className="w-3.5 h-3.5" />
-              <span>Display List (Lista)</span>
+              <span>Display List</span>
             </button>
           </div>
 
@@ -274,7 +334,7 @@ export const ScreenMap: React.FC = () => {
             {/* Gutter / Row Numbers, Mode & Palette Preview */}
             <div className="flex flex-col select-none bg-zinc-950/90 border-r border-zinc-800 shrink-0">
               {screenRows.map((row, idx) => {
-                const rowHeight = (row.mode === 5 ? 16 : 8) * 2;
+                const rowHeight = (row.mode === 5 ? 16 : 8) * zoomScale;
                 const isSelected = selectedRowIndex === idx;
                 const colors = row.colorRegisters;
 
@@ -339,7 +399,7 @@ export const ScreenMap: React.FC = () => {
                       isSelected ? 'ring-1 ring-inset ring-amber-400/70 z-10' : ''
                     }`}
                   >
-                    <RowCanvas rowIndex={idx} />
+                    <RowCanvas rowIndex={idx} scale={zoomScale} />
                   </div>
                 );
               })}
@@ -463,7 +523,7 @@ export const ScreenMap: React.FC = () => {
 
               {/* Row Canvas Render */}
               <div className="flex-1 flex justify-center overflow-x-auto">
-                <RowCanvas rowIndex={idx} />
+                <RowCanvas rowIndex={idx} scale={zoomScale} />
               </div>
             </div>
           ))}

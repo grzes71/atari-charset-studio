@@ -7,6 +7,7 @@ import { atariByteToHex } from '../../utils/atariColorLUT';
 export const CharsetSheet: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [hoverCode, setHoverCode] = useState<number | null>(null);
+  const [sheetSize, setSheetSize] = useState<'normal' | 'large'>('large');
 
   const {
     banks,
@@ -24,7 +25,7 @@ export const CharsetSheet: React.FC = () => {
   const activeBank = banks[activeBankId];
   const activeRowMode = screenRows[selectedRowIndex]?.mode || 2;
   const isMulticolor = activeRowMode !== 2;
-  const scale = 2;
+  const scale = 3; // High density 384x384 canvas
   const totalRows = 16; // Always 16 rows * 16 cols = 256 characters
 
   const renderSheet = useCallback(() => {
@@ -108,9 +109,36 @@ export const CharsetSheet: React.FC = () => {
             Zestaw Znaków i Paleta
           </h2>
         </div>
-        <span className="font-mono text-xs px-2 py-0.5 rounded bg-zinc-900 text-zinc-400 border border-zinc-800">
-          Wszystkie 256 znaków (0–255)
-        </span>
+        <div className="flex items-center gap-2">
+          {/* Size switch */}
+          <div className="flex items-center bg-zinc-900 p-0.5 rounded border border-zinc-800 text-[11px] font-mono">
+            <button
+              onClick={() => setSheetSize('normal')}
+              className={`px-2 py-0.5 rounded transition ${
+                sheetSize === 'normal'
+                  ? 'bg-zinc-800 text-amber-400 font-bold shadow'
+                  : 'text-zinc-400 hover:text-zinc-200'
+              }`}
+              title="Standardowy rozmiar (420px)"
+            >
+              100%
+            </button>
+            <button
+              onClick={() => setSheetSize('large')}
+              className={`px-2 py-0.5 rounded transition ${
+                sheetSize === 'large'
+                  ? 'bg-zinc-800 text-amber-400 font-bold shadow'
+                  : 'text-zinc-400 hover:text-zinc-200'
+              }`}
+              title="Większy rozmiar (520px - zalecany)"
+            >
+              125%
+            </button>
+          </div>
+          <span className="font-mono text-xs px-2 py-0.5 rounded bg-zinc-900 text-zinc-400 border border-zinc-800 hidden sm:inline">
+            256 znaków (0–255)
+          </span>
+        </div>
       </div>
 
       {/* Mode & Palette Indicator */}
@@ -147,7 +175,7 @@ export const CharsetSheet: React.FC = () => {
       </div>
 
       {/* Canvas Sheet (All 256 characters) */}
-      <div className="flex justify-center p-2 bg-zinc-950 rounded-lg border border-zinc-800/80 shadow-inner">
+      <div className="flex justify-center p-2.5 bg-zinc-950 rounded-lg border border-zinc-800/80 shadow-inner">
         <canvas
           ref={canvasRef}
           width={16 * 8 * scale}
@@ -155,10 +183,11 @@ export const CharsetSheet: React.FC = () => {
           onClick={handleCanvasClick}
           onMouseMove={handleMouseMove}
           onMouseLeave={handleMouseLeave}
-          className="cursor-pointer border border-zinc-800 hover:border-amber-500/40 rounded transition block"
+          className="cursor-pointer border border-zinc-800 hover:border-amber-500/40 rounded transition block shadow-md"
           style={{
             width: '100%',
-            maxWidth: '420px',
+            maxWidth: sheetSize === 'large' ? '520px' : '420px',
+            aspectRatio: '1 / 1',
             imageRendering: 'pixelated',
           }}
         />
