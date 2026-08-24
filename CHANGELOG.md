@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.7.0 (2026-08-24)
+
+## What's Changed in PR #14 (feat: Add export)
+
+### 🚀 Features
+- feat: Add export (c0c3d24)
+
+
+**Merged by:** @grzes71
+
+
 ## v1.6.0 (2026-08-23)
 
 ## What's Changed in PR #12 (feat: Show colors in screen map)
