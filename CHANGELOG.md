@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.8.0 (2026-08-24)
+
+## What's Changed in PR #15 (feat: UI Improvements)
+
+### 🚀 Features
+- feat: UI Improvements (caea5cd)
+
+
+**Merged by:** @grzes71
+
+
 ## v1.7.0 (2026-08-24)
 
 ## What's Changed in PR #14 (feat: Add export)
