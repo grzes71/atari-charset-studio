@@ -3,13 +3,20 @@
 > Profesjonalny, webowy edytor zestawów znaków (fontów) oraz map ekranu dla komputerów **Atari 8-bit (seria 400/800, XL, XE)**.  
 > Aplikacja działa w 100% po stronie przeglądarki (SPA, Offline-first) z bezpośrednim odwzorowaniem sprzętowej pamięci retro w `Typed Arrays` i akcelerowanym renderowaniem na HTML5 `<canvas>`.
 
+[![Live Demo](https://img.shields.io/badge/demo-online-brightgreen.svg?style=for-the-badge&logo=github)](https://grzes71.github.io/atari-charset-studio/)
+[![Release](https://img.shields.io/github/v/release/grzes71/atari-charset-studio?style=for-the-badge&logo=github)](https://github.com/grzes71/atari-charset-studio/releases)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
+
+👉 **Wersja online (GitHub Pages):** [https://grzes71.github.io/atari-charset-studio/](https://grzes71.github.io/atari-charset-studio/)
+
 ![Screenshot](/img/screenshot.png)
 
 ---
 
 ## 📑 Spis Treści
 - [Główne Funkcjonalności](#-główne-funkcjonalności)
-- [Wymagania i Uruchomienie](#-wymagania-i-uruchomienie)
+- [Wersja Online (GitHub Pages)](#-wersja-online-github-pages)
+- [Wymagania i Uruchomienie Lokalne](#-wymagania-i-uruchomienie-lokalne)
 - [Instrukcja Użytkowania](#-instrukcja-użytkowania)
   - [1. Pasek Główny i Zarządzanie Bankami](#1-pasek-główny-i-zarządzanie-bankami)
   - [2. Edytor Pojedynczego Glifu (Glyph Editor)](#2-edytor-pojedynczego-glifu-glyph-editor)
@@ -23,7 +30,7 @@
 - [Struktura Projektu](#-struktura-projektu)
 - [Testy i Budowanie](#-testy-i-budowanie)
 - [Uruchamianie Wersji Produkcyjnej (Asset z Release)](#-uruchamianie-wersji-produkcyjnej-asset-z-release)
-- [Automatyzacja Wydań (GitHub Actions Release Workflow)](#-automatyzacja-wydań-github-actions-release-workflow)
+- [Automatyzacja Wydań i Wdrożenie (GitHub Actions & GitHub Pages)](#-automatyzacja-wydań-i-wdrożenie-github-actions--github-pages)
 - [Licencja](#-licencja)
 
 ---
@@ -56,7 +63,17 @@
 
 ---
 
-## 📦 Wymagania i Uruchomienie
+## 🌐 Wersja Online (GitHub Pages)
+
+Aplikacja jest dostępna bezpośrednio w przeglądarce bez konieczności instalowania czegokolwiek:
+
+👉 **[https://grzes71.github.io/atari-charset-studio/](https://grzes71.github.io/atari-charset-studio/)**
+
+Dzięki architekturze Client-Side SPA całe przetwarzanie odbywa się lokalnie w Twojej przeglądarce, a Twoje fonty i mapy nie opuszczają Twojego komputera.
+
+---
+
+## 📦 Wymagania i Uruchomienie Lokalne
 
 ### Wymagania wstępne
 * **Node.js** w wersji 18+ (zalecana wersja 20 lub 24)
@@ -145,7 +162,7 @@ Aplikacja uruchomi się lokalnie pod adresem: **[http://localhost:3000](http://l
 ## 📂 Struktura Projektu
 
 ```
-atari-web-fonteditor/
+atari-charset-studio/
 ├── src/
 │   ├── components/            # Komponenty interfejsu React
 │   │   ├── Toolbar/           # Główny pasek narzędzi, import/eksport, zarządzanie bankami
@@ -223,7 +240,7 @@ Zawartość rozpakowanego archiwum można bezpośrednio wgrać na dowolny serwer
 
 ---
 
-## ⚙️ Automatyzacja Wydań (GitHub Actions Release Workflow)
+## ⚙️ Automatyzacja Wydań i Wdrożenie (GitHub Actions & GitHub Pages)
 
 W repozytorium skonfigurowany jest w pełni zautomatyzowany przepływ wydań CI/CD ([release-on-pr-merge.yml](.github/workflows/release-on-pr-merge.yml)):
 
@@ -243,7 +260,10 @@ W repozytorium skonfigurowany jest w pełni zautomatyzowany przepływ wydań CI/
    * Uruchamia zestaw testów jednostkowych (`npm run test:run`).
    * Buduje zoptymalizowaną wersję produkcyjną (`npm run build`).
    * Pakuje zawartość katalogu `dist/` do archiwum zip: `atari-charset-studio-vX.Y.Z.zip`.
-5. **Publikacja GitHub Release:**
+5. **Wdrożenie na GitHub Pages:**
+   * Automatycznie publikuje najnowszą wersję z katalogu `dist/` na gałąź `gh-pages`.
+   * Aktualizacja strony online [https://grzes71.github.io/atari-charset-studio/](https://grzes71.github.io/atari-charset-studio/) następuje bezobsługowo przy każdym wydaniu.
+6. **Publikacja GitHub Release:**
    * Tworzy nowy tag Git `vX.Y.Z` oraz oficjalny GitHub Release z automatycznie sformatowanymi Release Notes i dołączonym plikiem `.zip` jako gotowym do pobrania assetem.
 
 ---
