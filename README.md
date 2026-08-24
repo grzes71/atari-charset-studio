@@ -23,7 +23,8 @@
   - [3. Podgląd Banku (Charset Sheet)](#3-podgląd-banku-charset-sheet)
   - [4. Rejestry Kolorów Atari GTIA & Paleta](#4-rejestry-kolorów-atari-gtia--paleta)
   - [5. Edytor Mapy Ekranu (Display List View)](#5-edytor-mapy-ekranu-display-list-view)
-  - [6. Import i Eksport plików .fnt](#6-import-i-eksport-plików-fnt)
+  - [6. Zapis i Odczyt Projektów oraz Plików (.json, .atrview, .fnt)](#6-zapis-i-odczyt-projektów-oraz-plików-json-atrview-fnt)
+- [Obsługiwane Formaty Plików (Import / Eksport)](#-obsługiwane-formaty-plików-import--eksport)
 - [Architektura Techniczna i Zgodność ze Sprzętem](#-architektura-techniczna-i-zgodność-ze-sprzętem)
   - [Obsługiwane Tryby Układu ANTIC](#obsługiwane-tryby-układu-antic)
   - [Struktura Pamięci](#struktura-pamięci)
@@ -45,6 +46,7 @@
 * 🌈 **Autentyczna paleta kolorów Atari GTIA:**
   * 256-kolorowa tablica konwersji Atari NTSC/Altirra LUT na RGB.
   * Interaktywny selektor rejestrów: `COLBAK`, `COLPF0`, `COLPF1`, `COLPF2`, `COLPF3`.
+  * Niezależne palety dla każdego wiersza ekranu oraz tryby nakładania (*bieżący wiersz*, *wszystkie wiersze*, *wiersze banku*).
   * Presety kolorystyczne (*Klasyczny Atari Blue*, *Retro Dark Studio*, *Green Phosphor*, *Amber CRT*).
 * 🛠️ **Zaawansowane narzędzia edycji glifu:**
   * Przesuwanie w 4 kierunkach z opcjonalnym zawijaniem (Wrap).
@@ -53,11 +55,14 @@
   * Podgląd glifu w skali 1:1 oraz powiększeniu 2:1.
 * 📺 **Symulator Display List (Mapa Ekranu):**
   * Konfiguracja trybu ANTIC (2, 4, 5) oraz banku znaków niezależnie dla każdego wiersza.
+  * Indywidualna paleta kolorów rejestrów dla każdego wiersza Display List.
   * Tryb malowania pędzlem wybranego znaku oraz bezpośrednie wpisywanie tekstu z klawiatury.
   * Dynamiczne dodawanie, usuwanie, przestawianie i wypełnianie wierszy.
-* 💾 **Pliki i schowek:**
-  * Eksport i import surowych plików binarnych `.fnt` / `.rom` (1024 bajty) bez nagłówków.
-  * Obsługa metody **Drag & Drop** (przeciągnij plik `.fnt` na okno aplikacji).
+* 💾 **Wszechstronny Import i Eksport:**
+  * **Natywny projekt JSON (`.json`):** Pełny zapis i odczyt projektu (wszystkie banki, cała Display List, kolory wierszy, stan edytora).
+  * **Kompatybilność z Atari FontMaker (`.atrview`):** Bezproblemowa wymiana projektów z popularnym narzędziem fontmaker.
+  * **Surowe pliki binarne (`.fnt` / `.rom` / `.bin`):** 1024-bajtowe zrzuty zestawów znaków dla assemblerów (MADS, Mac/65, CC65).
+  * **Drag & Drop:** Inteligentne wczytywanie upuszczonych plików `.json`, `.atrview` oraz `.fnt`.
   * Wbudowany standardowy zestaw znaków Atari XL/XE OS ROM.
   * Pełna historia operacji **Undo / Redo** (`Ctrl+Z` / `Ctrl+Y`).
 
@@ -137,9 +142,80 @@ Aplikacja uruchomi się lokalnie pod adresem: **[http://localhost:3000](http://l
 * **Tryb Wpisywania Tekstu:** Wpisz tekst w polu tekstowym i kliknij *Wstaw* — litery zostaną automatycznie przekonwertowane na kody ekranowe Atari i umieszczone w wybranym wierszu.
 * **Wypełnij / Wyczyść:** Przyciski szybkiego wypełnienia wiersza aktywnym znakiem lub wyczyszczenia spacjami.
 
-### 6. Import i Eksport plików .fnt
-* **Eksport (.fnt):** Kliknij przycisk *Eksportuj .fnt* w prawym górnym rogu. Przeglądarka pobierze surowy plik binarny o rozmiarze dokładnie **1024 bajtów** (128 znaków x 8 bajtów), gotowy do natychmiastowego użycia w assemblerze Atari (np. MADS, Mac/65, CC65) lub emulatorze Altirra.
-* **Import (.fnt / .rom):** Kliknij *Importuj .fnt* lub po prostu **przeciągnij i upuść plik** na okno przeglądarki. Zostanie utworzony nowy bank z wczytanym fontem.
+### 6. Zapis i Odczyt Projektów oraz Plików (.json, .atrview, .fnt)
+* **Pełny Zapis Projektu (.json):** Kliknij główny przycisk **Zapisz projekt (.json)**. Aplikacja wyeksportuje kompletny stan edytora w ustrukturyzowanym formacie JSON (wszystkie banki, mapa ekranu, palety wierszy, stan edytora).
+* **Wczytanie Projektu (.json):** Kliknij przycisk **.json** lub upuść plik `.json` w oknie aplikacji.
+* **Format Atari FontMaker (.atrview):**
+  * **Zapisz .atrview:** Eksportuje dane w formacie zgodnym z programem Atari FontMaker.
+  * **Wczytaj .atrview:** Wczytuje projekty zapisane w Atari FontMaker.
+* **Pojedyncze Pliki Binarne (.fnt / .rom):**
+  * **Pobierz .fnt:** Zapisuje aktywny bank jako surowy zrzut binarny 1024B (128 znaków x 8 bajtów).
+  * **Wczytaj .fnt:** Tworzy nowy bank ze wskazanego pliku binarnego.
+
+---
+
+## 💾 Obsługiwane Formaty Plików (Import / Eksport)
+
+Atari Charset Studio zapewnia kompleksową obsługę trzech kluczowych formatów plików:
+
+| Format | Rozszerzenie | Import | Eksport | Zakres danych i Zastosowanie |
+|---|---|:---:|:---:|---|
+| **Natywny Projekt Studio** | `.json` / `.acs.json` | ✅ | ✅ | **Zalecany format roboczy.** Bezstratny zapis całego środowiska: nielimitowana liczba banków znaków, kompletna Display List (Antic 2/4/5), per-wierszowe rejestry kolorów GTIA, kody ekranowe i stan widoku edytora. Format tekstowy, czytelny i idealny do wersjonowania w Git. |
+| **Atari FontMaker Project** | `.atrview` | ✅ | ✅ | Format wymiany danych z popularnym programem *Atari FontMaker*. Obejmuje do 4 banków znaków (4096 bajtów), matrycę ekranu 40 kolumn oraz 10-bajtową bazową paletę kolorów. |
+| **Surowy Font Binarny** | `.fnt` / `.rom` / `.bin` | ✅ | ✅ | Czysty zrzut binarny pamięci fontu o rozmiarze **1024 bajtów** (128 znaków x 8 bajtów) bez dodatkowych nagłówków. Format gotowy do bezpośredniego włączenia do assemblera (`ins "font.fnt"` w MADS/Mac65) lub załadowania do emulatora Altirra. |
+
+### Struktura Natywnego Formatu JSON (`.json`)
+
+Natywny format projektu charakteryzuje się czytelną strukturą, w której dane binarne glifów i ekranu kodowane są w postaci ciągów szesnastkowych (HEX):
+
+```json
+{
+  "format": "atari-charset-studio",
+  "version": 1,
+  "appVersion": "1.6.0",
+  "createdAt": "2026-08-24T09:00:00.000Z",
+  "name": "MojProjekt",
+  "activeBankId": "bank-0",
+  "banks": [
+    {
+      "id": "bank-0",
+      "name": "Font Glowny",
+      "data": "0000000000000000..." // 2048 znaków HEX = 1024 bajty
+    }
+  ],
+  "colorRegisters": {
+    "COLBAK": 0,
+    "COLPF0": 40,
+    "COLPF1": 202,
+    "COLPF2": 148,
+    "COLPF3": 70
+  },
+  "paletteApplyMode": "currentRow",
+  "screenRows": [
+    {
+      "id": "row-0",
+      "mode": 2,
+      "bankId": "bank-0",
+      "charData": "0001020304...", // 80 znaków HEX = 40 bajtów
+      "colorRegisters": {
+        "COLBAK": 0,
+        "COLPF0": 40,
+        "COLPF1": 202,
+        "COLPF2": 148,
+        "COLPF3": 70
+      }
+    }
+  ],
+  "editorState": {
+    "selectedCharIndex": 33,
+    "activeColorBitPair": 1,
+    "paintTool": "draw",
+    "screenPaintMode": "glyph",
+    "selectedRowIndex": 0,
+    "selectedColIndex": 0
+  }
+}
+```
 
 ---
 

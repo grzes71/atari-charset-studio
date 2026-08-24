@@ -35,3 +35,54 @@ export interface ClipboardGlyph {
   mode: AnticMode;
 }
 
+export interface StudioProjectBankDto {
+  id: string;
+  name: string;
+  data: string; // Hex string (2048 chars for 1024 bytes)
+}
+
+export interface StudioProjectRowDto {
+  id: string;
+  mode: AnticMode;
+  bankId: string;
+  charData: string; // Hex string (80 chars for 40 bytes)
+  colorRegisters?: ColorRegisters;
+}
+
+export interface StudioProjectEditorStateDto {
+  selectedCharIndex?: number;
+  activeColorBitPair?: BitPair;
+  paintTool?: ToolMode;
+  screenPaintMode?: ScreenPaintMode;
+  isInverseActive?: boolean;
+  selectedRowIndex?: number;
+  selectedColIndex?: number;
+}
+
+export interface StudioProjectDto {
+  format: 'atari-charset-studio';
+  version: number;
+  appVersion?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  name?: string;
+  activeBankId?: string;
+  banks: StudioProjectBankDto[];
+  colorRegisters: ColorRegisters;
+  paletteApplyMode?: PaletteApplyMode;
+  screenRows: StudioProjectRowDto[];
+  editorState?: StudioProjectEditorStateDto;
+}
+
+export interface StudioProject {
+  format: 'atari-charset-studio';
+  version: number;
+  name?: string;
+  activeBankId: string;
+  banks: Record<string, CharacterBank>;
+  colorRegisters: ColorRegisters;
+  paletteApplyMode?: PaletteApplyMode;
+  screenRows: ScreenRow[];
+  editorState?: StudioProjectEditorStateDto;
+}
+

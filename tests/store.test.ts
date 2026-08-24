@@ -145,5 +145,69 @@ describe('AppStore - Row & Bank operations', () => {
     setSelectedCell(1, 0);
     expect(useAppStore.getState().colorRegisters.COLBAK).toBe(0x34);
   });
+
+  it('importProject restores all banks, screenRows, palettes and editor state', () => {
+    const { importProject } = useAppStore.getState();
+
+    const bank1Data = new Uint8Array(1024).fill(0x33);
+    const bank2Data = new Uint8Array(1024).fill(0x44);
+
+    importProject({
+      format: 'atari-charset-studio',
+      version: 1,
+      name: 'Test Project',
+      activeBankId: 'bank-b',
+      banks: {
+        'bank-a': { id: 'bank-a', name: 'Font A', data: bank1Data },
+        'bank-b': { id: 'bank-b', name: 'Font B', data: bank2Data },
+      },
+      colorRegisters: {
+        COLBAK: 0x22,
+        COLPF0: 0x44,
+        COLPF1: 0x66,
+        COLPF2: 0x88,
+        COLPF3: 0xaa,
+      },
+      paletteApplyMode: 'bankRows',
+      screenRows: [
+        {
+          id: 'row-custom-0',
+          mode: 4,
+          bankId: 'bank-b',
+          charData: new Uint8Array(40).fill(0x10),
+          colorRegisters: {
+            COLBAK: 0x22,
+            COLPF0: 0x44,
+            COLPF1: 0x66,
+            COLPF2: 0x88,
+            COLPF3: 0xaa,
+          },
+        },
+      ],
+      editorState: {
+        selectedCharIndex: 50,
+        activeColorBitPair: 2,
+        paintTool: 'erase',
+        screenPaintMode: 'text',
+        selectedRowIndex: 0,
+        selectedColIndex: 5,
+      },
+    });
+
+    const state = useAppStore.getState();
+    expect(Object.keys(state.banks)).toHaveLength(2);
+    expect(state.banks['bank-b'].name).toBe('Font B');
+    expect(state.banks['bank-b'].data[0]).toBe(0x44);
+    expect(state.activeBankId).toBe('bank-b');
+    expect(state.paletteApplyMode).toBe('bankRows');
+    expect(state.colorRegisters.COLPF1).toBe(0x66);
+    expect(state.screenRows).toHaveLength(1);
+    expect(state.screenRows[0].mode).toBe(4);
+    expect(state.screenRows[0].bankId).toBe('bank-b');
+    expect(state.selectedCharIndex).toBe(50);
+    expect(state.activeColorBitPair).toBe(2);
+    expect(state.paintTool).toBe('erase');
+    expect(state.screenPaintMode).toBe('text');
+  });
 });
 
