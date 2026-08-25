@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.9.0 (2026-08-25)
+
+## What's Changed in PR #16 (feat: UI Improvements)
+
+### 🚀 Features
+- feat: UI Improvements (c18b993)
+
+
+**Merged by:** @grzes71
+
+
 ## v1.8.0 (2026-08-24)
 
 ## What's Changed in PR #15 (feat: UI Improvements)
