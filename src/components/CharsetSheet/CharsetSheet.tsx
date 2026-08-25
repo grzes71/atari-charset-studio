@@ -7,7 +7,7 @@ import { atariByteToHex } from '../../utils/atariColorLUT';
 export const CharsetSheet: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [hoverCode, setHoverCode] = useState<number | null>(null);
-  const [sheetSize, setSheetSize] = useState<'normal' | 'large'>('large');
+  const [sheetSize, setSheetSize] = useState<'100' | '125' | '150'>('125');
 
   const {
     banks,
@@ -25,7 +25,7 @@ export const CharsetSheet: React.FC = () => {
   const activeBank = banks[activeBankId];
   const activeRowMode = screenRows[selectedRowIndex]?.mode || 2;
   const isMulticolor = activeRowMode !== 2;
-  const scale = 3; // High density 384x384 canvas
+  const scale = 4; // High density 512x512 canvas
   const totalRows = 16; // Always 16 rows * 16 cols = 256 characters
 
   const renderSheet = useCallback(() => {
@@ -110,29 +110,40 @@ export const CharsetSheet: React.FC = () => {
           </h2>
         </div>
         <div className="flex items-center gap-2">
-          {/* Size switch */}
+          {/* Size switch: 100%, 125%, 150% */}
           <div className="flex items-center bg-zinc-900 p-0.5 rounded border border-zinc-800 text-[11px] font-mono">
             <button
-              onClick={() => setSheetSize('normal')}
+              onClick={() => setSheetSize('100')}
               className={`px-2 py-0.5 rounded transition ${
-                sheetSize === 'normal'
+                sheetSize === '100'
                   ? 'bg-zinc-800 text-amber-400 font-bold shadow'
                   : 'text-zinc-400 hover:text-zinc-200'
               }`}
-              title="Standardowy rozmiar (420px)"
+              title="Powiększenie 100% (420px)"
             >
               100%
             </button>
             <button
-              onClick={() => setSheetSize('large')}
+              onClick={() => setSheetSize('125')}
               className={`px-2 py-0.5 rounded transition ${
-                sheetSize === 'large'
+                sheetSize === '125'
                   ? 'bg-zinc-800 text-amber-400 font-bold shadow'
                   : 'text-zinc-400 hover:text-zinc-200'
               }`}
-              title="Większy rozmiar (520px - zalecany)"
+              title="Powiększenie 125% (520px - zalecane)"
             >
               125%
+            </button>
+            <button
+              onClick={() => setSheetSize('150')}
+              className={`px-2 py-0.5 rounded transition ${
+                sheetSize === '150'
+                  ? 'bg-zinc-800 text-amber-400 font-bold shadow'
+                  : 'text-zinc-400 hover:text-zinc-200'
+              }`}
+              title="Powiększenie 150% (630px)"
+            >
+              150%
             </button>
           </div>
           <span className="font-mono text-xs px-2 py-0.5 rounded bg-zinc-900 text-zinc-400 border border-zinc-800 hidden sm:inline">
@@ -186,7 +197,7 @@ export const CharsetSheet: React.FC = () => {
           className="cursor-pointer border border-zinc-800 hover:border-amber-500/40 rounded transition block shadow-md"
           style={{
             width: '100%',
-            maxWidth: sheetSize === 'large' ? '520px' : '420px',
+            maxWidth: sheetSize === '150' ? '630px' : sheetSize === '125' ? '520px' : '420px',
             aspectRatio: '1 / 1',
             imageRendering: 'pixelated',
           }}
